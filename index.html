@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Village List — Raipur (002) · CMMS</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #ffffff;
+    --navy-mid: #f4f6fa;
+    --navy-card: #ffffff;
+    --border: #d0dbe8;
+    --accent: #c97d00;
+    --accent2: #c04b0e;
+    --teal: #007a7a;
+    --blue: #1a6fbf;
+    --white: #1a2a3a;
+    --muted: #5a6e85;
+    --success: #009965;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--navy); color: var(--white); font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; min-height: 100vh; }
+
+  header { background: linear-gradient(90deg, #f8f9fc 0%, #eef1f8 60%, #f8f9fc 100%); border-bottom: 2px solid var(--accent); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+  .h-left { display: flex; align-items: center; gap: 14px; }
+  .emblem { width: 46px; height: 46px; background: conic-gradient(from 0deg, #f4a300, #e05c1a, #f4a300); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 16px rgba(244,163,0,0.35); flex-shrink: 0; }
+  .h-text h1 { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: 0.07em; text-transform: uppercase; }
+  .h-text p { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .user-chip { background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 11px; color: var(--teal); font-family: 'IBM Plex Mono', monospace; }
+
+  .breadcrumb { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 8px 28px; font-size: 11px; color: var(--muted); display: flex; gap: 7px; align-items: center; }
+  .breadcrumb b { color: var(--accent); font-weight: 500; }
+  .breadcrumb .sep { color: var(--border); }
+
+  main { padding: 26px 28px 48px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+  .stat-card { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .stat-card.s1::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .stat-card.s2::before { background: linear-gradient(90deg, var(--teal), #006e6e); }
+  .stat-card.s3::before { background: linear-gradient(90deg, var(--blue), #1a5fa0); }
+  .stat-card.s4::before { background: linear-gradient(90deg, var(--success), #006e45); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 500; margin-top: 6px; line-height: 1; }
+  .stat-card.s1 .stat-value { color: var(--accent); }
+  .stat-card.s2 .stat-value { color: var(--teal); }
+  .stat-card.s3 .stat-value { color: var(--blue); }
+  .stat-card.s4 .stat-value { color: var(--success); }
+  .stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+
+  .page-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
+  .ptitle { display: flex; align-items: center; gap: 10px; }
+  .ptitle-bar { width: 4px; height: 26px; background: linear-gradient(180deg, var(--accent), var(--accent2)); border-radius: 2px; }
+  .ptitle h2 { font-size: 17px; font-weight: 600; }
+  .ptitle p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); pointer-events: none; }
+  .search-box { background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 7px; padding: 8px 14px 8px 36px; color: var(--white); font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; outline: none; width: 240px; transition: border-color 0.2s; }
+  .search-box:focus { border-color: var(--teal); }
+  .search-box::placeholder { color: var(--muted); }
+  .btn { background: transparent; border: 1px solid var(--accent); border-radius: 7px; padding: 8px 16px; color: var(--accent); font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+  .btn:hover { background: rgba(244,163,0,0.1); }
+
+  .pagination-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+  .page-info { font-size: 11.5px; color: var(--muted); }
+  .page-info span { color: var(--teal); font-weight: 500; }
+  .page-btns { display: flex; gap: 5px; align-items: center; }
+  .page-btn { background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 5px; padding: 5px 11px; color: var(--muted); font-size: 12px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; transition: all 0.15s; }
+  .page-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .page-btn.active { background: rgba(0,191,191,0.15); border-color: var(--teal); color: var(--teal); font-weight: 600; }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .per-page-select { background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 5px; padding: 5px 10px; color: var(--muted); font-size: 12px; font-family: 'IBM Plex Mono', monospace; outline: none; cursor: pointer; }
+
+  .table-wrap { background: var(--navy-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  thead tr { background: linear-gradient(90deg, #eef1f8 0%, #e6eaf4 100%); border-bottom: 2px solid var(--accent); }
+  th { padding: 12px 16px; text-align: left; font-size: 10.5px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; border-right: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
+  th:hover { background: rgba(244,163,0,0.06); }
+  th:last-child { border-right: none; }
+  th .si { font-size: 9px; opacity: 0.4; margin-left: 4px; }
+  th.sorted { color: var(--teal); }
+  tbody tr { border-bottom: 1px solid rgba(208,219,232,0.7); transition: background 0.12s; }
+  tbody tr:nth-child(even) { background: rgba(244,246,250,0.6); }
+  tbody tr:hover { background: rgba(0,122,122,0.05); }
+  td { padding: 11px 16px; vertical-align: middle; border-right: 1px solid rgba(208,219,232,0.5); font-size: 12.5px; }
+  td:last-child { border-right: none; }
+
+  .vname { font-weight: 600; color: #1a2a3a; }
+  .vcode-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--teal); margin-top: 2px; display: block; }
+  .loc-badge { display: inline-block; background: rgba(26,111,191,0.08); border: 1px solid rgba(26,111,191,0.2); border-radius: 4px; padding: 2px 8px; font-size: 11px; color: var(--blue); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+  .special-code { background: rgba(244,163,0,0.1); border-color: rgba(244,163,0,0.3); color: var(--accent); }
+  .area-val { color: #1a5fa0; font-family: 'IBM Plex Mono', monospace; text-align: right; }
+  .idx { color: rgba(106,130,160,0.45); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; text-align: center; }
+  .dup-tag { display: inline-block; background: rgba(224,92,26,0.15); border: 1px solid rgba(224,92,26,0.3); border-radius: 3px; padding: 1px 5px; font-size: 9px; color: var(--accent2); margin-left: 5px; vertical-align: middle; font-weight: 600; letter-spacing: 0.04em; }
+  .loc-text { color: #6a82a0; font-size: 12px; }
+  .loc-code { color: var(--border); }
+  .no-results { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+  /* Input columns */
+  .inp {
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 8px;
+    color: var(--white);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    width: 100%;
+    min-width: 110px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .inp:focus { border-color: var(--teal); background: rgba(0,191,191,0.06); }
+  .inp::placeholder { color: rgba(106,130,160,0.5); font-size: 10.5px; }
+  .inp.inp-num { min-width: 70px; text-align: center; }
+  .inp.inp-pop { min-width: 90px; }
+  .inp.inp-hamlet { min-width: 140px; }
+  .inp.inp-landmark { min-width: 130px; border-color: rgba(244,163,0,0.25); }
+  .inp.inp-landmark:focus { border-color: var(--accent); background: rgba(244,163,0,0.05); }
+  .inp.inp-patwari { min-width: 120px; border-color: rgba(0,201,141,0.25); }
+  .inp.inp-patwari:focus { border-color: var(--success); background: rgba(0,201,141,0.05); }
+  .inp.filled { border-color: rgba(0,191,191,0.4); }
+
+  th.input-th { color: #c0d0e8; font-size: 10px; }
+  th.input-th.landmark-th { color: var(--accent2); }
+  th.input-th.patwari-th { color: var(--success); }
+  th.save-th { color: var(--teal); font-size: 10px; text-align: center; }
+  th.time-th { color: #a0b4d0; font-size: 10px; text-align: center; }
+  th.unlock-th { color: #c04b0e; font-size: 10px; text-align: center; }
+  td.unlock-td { text-align: center; vertical-align: middle; }
+  .unlock-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 4px;
+    background: rgba(192,75,14,0.08);
+    border: 1px solid rgba(192,75,14,0.35);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--accent2);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+    min-width: 80px;
+  }
+  .unlock-btn:hover { background: rgba(192,75,14,0.18); border-color: var(--accent2); transform: scale(1.04); }
+  .unlock-na { color: rgba(106,130,160,0.3); font-size: 13px; }
+
+  /* Locked row */
+  tr.locked td { background: rgba(0,201,141,0.04) !important; }
+  tr.locked:hover td { background: rgba(0,201,141,0.07) !important; }
+  .inp:disabled {
+    background: rgba(0,201,141,0.06) !important;
+    border-color: rgba(0,201,141,0.2) !important;
+    color: #a0d4c0 !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+  }
+  .lock-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(0,201,141,0.12);
+    border: 1px solid rgba(0,201,141,0.3);
+    border-radius: 5px;
+    padding: 5px 11px;
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Timestamp cell */
+  .ts-cell {
+    text-align: center;
+    min-width: 110px;
+  }
+  .ts-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--teal);
+    display: block;
+  }
+  .ts-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+  }
+  .ts-empty {
+    color: rgba(106,130,160,0.3);
+    font-size: 11px;
+    font-style: italic;
+  }
+
+  /* Per-row save button */
+  .row-save-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 5px;
+    background: rgba(0,191,191,0.1);
+    border: 1px solid rgba(0,191,191,0.35);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--teal);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+    min-width: 80px;
+  }
+  .row-save-btn:hover { background: rgba(0,191,191,0.22); border-color: var(--teal); transform: scale(1.04); }
+  .row-save-btn.saved {
+    background: rgba(0,201,141,0.15);
+    border-color: rgba(0,201,141,0.5);
+    color: var(--success);
+  }
+  td.save-td { text-align: center; vertical-align: middle; }
+
+  .save-btn {
+    background: linear-gradient(135deg, var(--teal), #006e6e);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.2s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+  .saved-toast {
+    display: none;
+    background: rgba(0,201,141,0.15);
+    border: 1px solid rgba(0,201,141,0.3);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 11.5px;
+    color: var(--success);
+  }
+
+  .table-footer { padding: 11px 18px; border-top: 1px solid var(--border); background: rgba(244,246,250,0.7); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .table-footer p { font-size: 10.5px; color: var(--muted); }
+  .count-badge { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--teal); background: rgba(0,191,191,0.1); border: 1px solid rgba(0,191,191,0.2); border-radius: 4px; padding: 3px 10px; white-space: nowrap; }
+
+  footer { text-align: center; padding: 14px; font-size: 10.5px; color: rgba(106,130,160,0.4); border-top: 1px solid var(--border); letter-spacing: 0.04em; }
+  footer span { color: var(--muted); }
+
+  ::-webkit-scrollbar { height: 5px; width: 5px; }
+  ::-webkit-scrollbar-track { background: #f0f2f5; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 700px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    header, main { padding-left: 14px; padding-right: 14px; }
+    .search-box { width: 180px; }
+  }
+
+  /* PRINT MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 420px;
+    max-width: 95vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal h3 { font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .modal p  { font-size: 11.5px; color: var(--muted); margin-bottom: 20px; }
+  .modal-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .modal-opt {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .modal-opt:hover { border-color: var(--teal); background: rgba(0,191,191,0.06); }
+  .modal-opt input[type=radio] { accent-color: var(--teal); width: 16px; height: 16px; }
+  .modal-opt-label { font-size: 13px; font-weight: 500; color: var(--white); }
+  .modal-opt-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-cancel { background: transparent; border: 1px solid var(--border); border-radius: 7px; padding: 8px 18px; color: var(--muted); font-size: 12px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; }
+  .modal-cancel:hover { border-color: var(--muted); }
+  .modal-confirm { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 7px; padding: 8px 22px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; }
+  .modal-confirm:hover { opacity: 0.9; }
+
+  /* PRINT STYLES */
+  @media print {
+    header, .breadcrumb, .stats-row, .page-title-row .controls,
+    .pagination-row, .table-footer, footer, .modal-overlay { display: none !important; }
+    body { background: #fff !important; color: #000 !important; font-size: 10pt; }
+    main { padding: 0 !important; }
+    .print-header { display: block !important; }
+    table { min-width: unset !important; font-size: 8.5pt; }
+    th { background: #1a3a6e !important; color: #fff !important; padding: 6px 8px !important; font-size: 8pt !important; }
+    td { padding: 5px 8px !important; border: 1px solid #ccc !important; color: #000 !important; }
+    tbody tr:nth-child(even) { background: #f5f7fa !important; }
+    .inp { border: 1px solid #aaa !important; background: #fff !important; color: #000 !important; font-size: 8.5pt !important; padding: 2px 4px !important; }
+    .vname { color: #000 !important; }
+    .vcode-sub { color: #555 !important; }
+    .loc-text, .area-val { color: #333 !important; }
+    .loc-badge { border: 1px solid #aaa !important; color: #333 !important; background: #eee !important; }
+    .table-wrap { box-shadow: none !important; border: 1px solid #ccc !important; border-radius: 0 !important; }
+    .dup-tag { background: #ffe0cc !important; color: #c04000 !important; }
+    .ptitle h2 { color: #000 !important; font-size: 14pt !important; }
+    .ptitle p  { color: #555 !important; }
+    .ptitle-bar { background: #1a3a6e !important; }
+  }
+  .print-header { display: none; }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="display:flex;position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
+  <div style="width:40px;height:40px;border:4px solid #d0dbe8;border-top-color:#007a7a;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div id="loadingMsg" style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#5a6e85;">Loading data…</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<!-- DB ERROR BANNER -->
+<div id="dbErrorBanner" style="display:none;background:#fff5f2;border:1.5px solid #f4b8a0;border-radius:8px;padding:12px 18px;margin:14px 28px 0;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;color:#7a2a0a;line-height:1.7;"></div>
+
+<!-- UNLOCK PASSWORD MODAL -->
+<div class="modal-overlay" id="unlockModalOverlay">
+  <div class="modal" style="width:360px">
+    <h3>🔓 Unlock Row</h3>
+    <p>Enter the password to unlock and edit this row.</p>
+    <input type="password" id="unlockPwdInput" placeholder="Enter password…" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none;margin-bottom:8px;background:#f8f9fc;color:var(--white);" onkeydown="if(event.key==='Enter')confirmUnlock()" />
+    <div id="unlockError" style="display:none;color:#c04b0e;font-size:11.5px;margin-bottom:10px;">❌ Incorrect password. Please try again.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+      <button class="modal-confirm" style="background:linear-gradient(135deg,#c04b0e,#c97d00)" onclick="confirmUnlock()">Unlock →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE + PRINT MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="e=>e.target===this&&closeModal()">
+  <div class="modal">
+    <h3>💾 Save &amp; Print / PDF</h3>
+    <p>Your data will be saved to browser memory, then you can print or export as PDF.</p>
+    <div class="modal-opts">
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="all" checked />
+        <div>
+          <div class="modal-opt-label">🖨 Print all 145 villages</div>
+          <div class="modal-opt-sub">Full table with all entered data</div>
+        </div>
+      </label>
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="filled" />
+        <div>
+          <div class="modal-opt-label">✅ Print only filled rows</div>
+          <div class="modal-opt-sub">Only villages with at least one field entered</div>
+        </div>
+      </label>
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="current" />
+        <div>
+          <div class="modal-opt-label">📄 Print current page only</div>
+          <div class="modal-opt-sub">Only the rows visible right now</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmPrint()">Save &amp; Print →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT HEADER (visible only when printing) -->
+<div class="print-header" style="padding:0 0 14px 0;">
+  <div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid #1a3a6e;padding-bottom:10px;margin-bottom:12px;">
+    <div style="font-size:22px;">🏛️</div>
+    <div>
+      <div style="font-size:13pt;font-weight:700;color:#1a3a6e;letter-spacing:0.05em">CENSUS OF INDIA 2027</div>
+      <div style="font-size:9pt;color:#555">Village Register · Raipur (002), Beawar (20), Rajasthan (09) · CMMS v0.15.23</div>
+    </div>
+    <div style="margin-left:auto;font-size:9pt;color:#555">Printed: <span id="printDate"></span></div>
+  </div>
+</div>
+
+<header>
+  <div class="h-left">
+    <div class="emblem">🏛️</div>
+    <div class="h-text">
+      <h1>Census of India 2027</h1>
+      <p>Office of the Registrar General &amp; Census Commissioner · Ministry of Home Affairs, GoI</p>
+    </div>
+  </div>
+  <div class="user-chip">NARENDRA BAPERIA — chv_0920002</div>
+</header>
+
+<div class="breadcrumb">
+  <b>HLO Management</b><span class="sep">›</span>
+  <b>Village Register</b><span class="sep">›</span>
+  Village List — Raipur (002), Beawar (20), Rajasthan (09)
+</div>
+
+<main>
+  <div class="stats-row">
+    <div class="stat-card s1">
+      <div class="stat-label">Total Villages</div>
+      <div class="stat-value">145</div>
+      <div class="stat-sub">Raipur Sub-district</div>
+    </div>
+    <div class="stat-card s2">
+      <div class="stat-label">Total Area</div>
+      <div class="stat-value" id="totalArea">—</div>
+      <div class="stat-sub">hectares (total)</div>
+    </div>
+    <div class="stat-card s3">
+      <div class="stat-label">Largest Village</div>
+      <div class="stat-value" id="largestVal" style="font-size:15px;margin-top:8px">—</div>
+      <div class="stat-sub" id="largestSub">by area</div>
+    </div>
+    <div class="stat-card s4">
+      <div class="stat-label">Duplicate Names</div>
+      <div class="stat-value">4</div>
+      <div class="stat-sub">Devnagar · Sodpura · Naharpura · Sabalpura</div>
+    </div>
+  </div>
+
+  <div class="page-title-row">
+    <div class="ptitle">
+      <div class="ptitle-bar"></div>
+      <div>
+        <h2>Village List</h2>
+        <p>Rajasthan (09) &nbsp;›&nbsp; Beawar (20) &nbsp;›&nbsp; Raipur (002) &nbsp;·&nbsp; <strong style="color:var(--accent)">145</strong> villages total</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-box" id="searchBox" type="text" placeholder="Search village name or code…" oninput="onSearch()" />
+      </div>
+      <button class="save-btn" onclick="openModal()">💾 Save &amp; Print / PDF</button>
+      <div class="saved-toast" id="savedToast">✓ Data Saved!</div>
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="pagination-row">
+    <div class="page-info">Showing <span id="showFrom">1</span>–<span id="showTo">25</span> of <span id="totalCount">145</span> villages</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted)">Rows per page:</span>
+      <select class="per-page-select" id="perPage" onchange="changePerPage()">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="145">All</option>
+      </select>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px" onclick="sortTable('idx')"># <span class="si">⇅</span></th>
+            <th onclick="sortTable('villageName')">Village / Town <span class="si">⇅</span></th>
+            <th onclick="sortTable('villageCode')">Code <span class="si">⇅</span></th>
+            <th>State</th>
+            <th>District</th>
+            <th>Sub-district</th>
+            <th onclick="sortTable('area')" style="text-align:right">Area (ha) <span class="si">⇅</span></th>
+            <th class="input-th">🏘 Hamlet Name</th>
+            <th class="input-th">🏠 No. of HLB</th>
+            <th class="input-th">👥 Est. Population<br><span style="font-size:9px;opacity:0.7">(by Patwari)</span></th>
+            <th class="input-th landmark-th">📍 Landmark</th>
+            <th class="input-th patwari-th">👤 Name of Patwari</th>
+            <th class="time-th">🕐 Entered On</th>
+            <th class="save-th">💾 Save Row</th>
+            <th class="unlock-th">🔓 Unlock</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <p id="footerNote">All 145 villages · Raipur (002), Beawar, Rajasthan</p>
+      <div class="count-badge" id="countBadge">145 Records</div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 &nbsp;|&nbsp; <span>Census Management and Monitoring System (CMMS)</span> &nbsp;|&nbsp; v0.15.23</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteField, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyByFepFRHGoqUI0IfmJtn3NR_kUsnA2_Sk",
+  authDomain: "village-cmms.firebaseapp.com",
+  projectId: "village-cmms",
+  storageBucket: "village-cmms.firebasestorage.app",
+  messagingSenderId: "298945981163",
+  appId: "1:298945981163:web:30d3cd4c44f34c4f73acae"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Show loading overlay
+function setLoading(on, msg='Loading data…'){
+  document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+  document.getElementById('loadingMsg').textContent = msg;
+}
+
+const villages = [
+  {c:"0001",n:"Deoli Kalan",a:4801.35},{c:"0002",n:"Seengla",a:440.93},{c:"0003",n:"Basni Kaviyan",a:384.75},
+  {c:"0004",n:"Nokh",a:381.64},{c:"0005",n:"Nimbera Kalan",a:1951},{c:"0006",n:"Basni Dadhwariyan",a:311.54},
+  {c:"0007",n:"Rampura Kalan",a:1205.74},{c:"0008",n:"Mohra Kalan",a:1093},{c:"0009",n:"Banseeya",a:1965},
+  {c:"0010",n:"Peepaliya Kalan",a:1559.96},{c:"0011",n:"Karmawas Maliyan",a:823},{c:"0012",n:"Kushalpura",a:2420},
+  {c:"0013",n:"Bagiyara",a:858.22},{c:"0014",n:"Aakeli",a:421.63},{c:"0015",n:"Leelamba",a:1566.06},
+  {c:"0016",n:"Madelav",a:1323.37},{c:"0017",n:"Bali",a:291},{c:"0018",n:"Beechardi",a:319},
+  {c:"0019",n:"Jhoontha",a:2843},{c:"0020",n:"Guriya",a:790.58},{c:"0021",n:"Sabalpura",a:1141.36},
+  {c:"0022",n:"Chanwadiya Khurd",a:857.56},{c:"0023",n:"Kalakot",a:520.74},{c:"0024",n:"Devnagar",a:387.77},
+  {c:"0025",n:"Kalab Kalan",a:396.19},{c:"0026",n:"Pachanpura",a:1899.1},{c:"0027",n:"Mohra Khurd",a:656.16},
+  {c:"0028",n:"Lawacha",a:751.97},{c:"0029",n:"Deepawas",a:579.19},{c:"0030",n:"Megarda",a:275.4},
+  {c:"0031",n:"Makarwali",a:182},{c:"0032",n:"Fata Khera",a:176.55},{c:"0033",n:"Relmagra",a:935.19},
+  {c:"0034",n:"Jhala Ki Chauki",a:504.38},{c:"0035",n:"Birantiya Khurd",a:2475.45},{c:"0036",n:"Birantiya Kalan",a:1827.51},
+  {c:"0037",n:"Dholi Dhed",a:358.38},{c:"0038",n:"Bogasani Khurd",a:317.95},{c:"0039",n:"Beesawas Khurd",a:67.87},
+  {c:"0040",n:"Veervasani",a:82.66},{c:"0041",n:"Beesawas Kalan",a:50.35},{c:"0042",n:"Hajiwas",a:633},
+  {c:"0043",n:"Dhoolkot",a:793},{c:"0044",n:"Lawamali",a:206},{c:"0045",n:"Khokhari",a:748},
+  {c:"0046",n:"Kheramamawas",a:575},{c:"0047",n:"Mesiya",a:1407},{c:"0048",n:"Chanwadiya Kalan",a:368.13},
+  {c:"0049",n:"Loharo Ka Badiya",a:509},{c:"0050",n:"Boontiwas",a:2393},{c:"0051",n:"Naharpura",a:1076.04},
+  {c:"0052",n:"Ramawas",a:550.57},{c:"0053",n:"Gopalpura",a:894.89},{c:"0054",n:"Devgarh",a:560},
+  {c:"0055",n:"Jhalamand",a:530.12},{c:"0056",n:"Mohra",a:829.09},{c:"0057",n:"Amba",a:188.27},
+  {c:"0058",n:"Peelpaya",a:167.48},{c:"0059",n:"Devnagar",a:347.44},{c:"0060",n:"Nahargarh",a:733.35},
+  {c:"0061",n:"Kesharpura",a:320.81},{c:"0062",n:"Rawaniya",a:519},{c:"0063",n:"Shrinagar",a:74.06},
+  {c:"0064",n:"Dujodiya",a:166.58},{c:"0065",n:"Naya Badiya",a:284.95},{c:"0066",n:"Rampura",a:206},
+  {c:"0067",n:"Sodpura",a:380.19},{c:"0068",n:"Karanpura",a:292.52},{c:"0069",n:"Sumel",a:1394.28},
+  {c:"0070",n:"Naibala",a:1009.98},{c:"0071",n:"Khera",a:535.6},{c:"0072",n:"Pratapgarh",a:932.95},
+  {c:"0073",n:"Naharpura",a:448.78},{c:"0074",n:"Chadhawaton Ki Dhani",a:606.99},{c:"0075",n:"Bhanwariya",a:628.94},
+  {c:"0076",n:"Kolpura",a:503.24},{c:"0077",n:"Ramgarh",a:424.25},{c:"0078",n:"Babra",a:1219.68},
+  {c:"0079",n:"Naya Gaon",a:250.91},{c:"0080",n:"Patan",a:653.2},{c:"0081",n:"Nanana",a:808.38},
+  {c:"0082",n:"Rawat Khera",a:253},{c:"0083",n:"Giri",a:1308.13},{c:"0084",n:"Sodpura",a:505.42},
+  {c:"0085",n:"Chainpura",a:185.15},{c:"0086",n:"Deoli Khurd",a:249.02},{c:"0087",n:"Shyampura",a:493.26},
+  {c:"0088",n:"Shahpura",a:165.25},{c:"0089",n:"Ratdiya",a:1427.27},{c:"0090",n:"Baripol",a:857},
+  {c:"0091",n:"Salakot",a:319},{c:"0092",n:"Jagmal Pura",a:193.73},{c:"0093",n:"Devnagar",a:282.16},
+  {c:"0094",n:"Miyapuriya",a:71},{c:"0095",n:"Amarpura",a:354},{c:"0096",n:"Chang",a:654.12},
+  {c:"0097",n:"Lakhina Panabaori",a:37},{c:"0098",n:"Ramgarh Chang",a:160},{c:"0099",n:"Amargarh Chang",a:96.58},
+  {c:"0100",n:"Chitar",a:762},{c:"0101",n:"Sailpura",a:195},{c:"0102",n:"Hathibhata",a:117},
+  {c:"0103",n:"Kanecha Udawatan",a:145.16},{c:"0104",n:"Relra",a:524.39},{c:"0105",n:"Chhapriya",a:74},
+  {c:"0106",n:"Sanderiya",a:237},{c:"0107",n:"Gavali Badiya",a:213},{c:"0108",n:"Jheentra",a:1049.67},
+  {c:"0109",n:"Jaitpura",a:748},{c:"0110",n:"Aashapura Nagar",a:46.28},{c:"0111",n:"Kesarpura",a:139.98},
+  {c:"0112",n:"Kanpura",a:1992},{c:"0113",n:"Lalpura",a:57},{c:"0114",n:"Saradhana",a:385},
+  {c:"0115",n:"Shergarh",a:103},{c:"0116",n:"Khera Sagrotan",a:55},{c:"0117",n:"Kotri",a:232},
+  {c:"0118",n:"Manpura",a:776},{c:"0119",n:"Sabalpura",a:154},{c:"0120",n:"Sendara",a:361},
+  {c:"0121",n:"Kurantiya",a:160},{c:"0122",n:"Ramgarh Sedontan",a:389},{c:"0123",n:"Borwar",a:1840.28},
+  {c:"0124",n:"Dholiya",a:302},{c:"0125",n:"Asan Tiloriya",a:201.12},{c:"0126",n:"Kaya Bheela",a:1336},
+  {c:"0127",n:"Kanuja",a:3244},{c:"0128",n:"Bhairu Ka Naka",a:289.25},{c:"0129",n:"Chak Deepawas",a:238},
+  {c:"0130",n:"Malni",a:310.23},{c:"0131",n:"Balloo Pura",a:1318.32},{c:"0132",n:"Kalab Khurd",a:1236.28},
+  {c:"0133",n:"Peepaliya Badia",a:331.52},{c:"0134",n:"Asan Jilelao",a:1080.64},{c:"0135",n:"Kalaliya",a:807},
+  {c:"0136",n:"Chogat",a:531.64},{c:"0137",n:"Bafola",a:149.26},{c:"0138",n:"Bhaiu",a:203.03},
+  {c:"0139",n:"Khanda Bhaga",a:184.15},{c:"0140",n:"Bagri",a:3157.73},{c:"0141",n:"Ramdevnagar",a:883.95},
+  {c:"0142",n:"Belpana",a:448},{c:"0143",n:"Kot Kirana",a:1533},{c:"0144",n:"Seerma",a:759},
+  {c:"8053",n:"Bar",a:1507.33}
+];
+
+// Duplicate detection
+const nameCount = {};
+villages.forEach(v => nameCount[v.n] = (nameCount[v.n]||0)+1);
+
+// Stats
+const totalArea = villages.reduce((s,v)=>s+v.a,0);
+const largest = villages.reduce((a,b)=>a.a>b.a?a:b);
+document.getElementById('totalArea').textContent = (totalArea/1000).toFixed(1)+'K';
+document.getElementById('largestVal').textContent = largest.n;
+document.getElementById('largestSub').textContent = largest.a.toLocaleString()+' ha · '+largest.c;
+
+// Persist entered data across pagination
+let userData = {};
+
+// Load all village data from Firestore
+async function loadFromFirestore(){
+  setLoading(true, 'Loading data from database…');
+  try {
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('REQUEST_TIMEOUT')), 8000)
+    );
+    const snapshot = await Promise.race([
+      getDocs(collection(db, 'villages')),
+      timeout
+    ]);
+    snapshot.forEach(docSnap => {
+      userData[docSnap.id] = docSnap.data();
+    });
+    setLoading(false);
+    render();
+  } catch(e){
+    setLoading(false);
+    let msg = '';
+    if(e.message === 'REQUEST_TIMEOUT'){
+      msg = '⏱️ <b>Database timed out.</b> Your Firestore rules are probably blocking reads.';
+    } else if(e.code === 'permission-denied'){
+      msg = '🔒 <b>Permission denied.</b> Firestore rules are blocking this request.';
+    } else {
+      msg = '❌ <b>Database error:</b> ' + (e.message || e.code || 'Unknown error');
+    }
+    document.getElementById('dbErrorBanner').innerHTML =
+      msg + '<br><span style="font-size:11px">👉 Go to <b>Firebase Console → Firestore → Rules</b> and set: <code style="background:#fee;padding:1px 5px;border-radius:3px">allow read, write: if true;</code> then save & publish.</span>';
+    document.getElementById('dbErrorBanner').style.display = 'block';
+    render(); // show the table anyway (empty data)
+  }
+}
+
+window.saveRow = async function(code, btn){
+  if(!userData[code]) userData[code]={};
+
+  const row = document.getElementById('row-'+code);
+  if(row){
+    row.querySelectorAll('.inp').forEach(inp=>{
+      userData[code][inp.dataset.field] = inp.value.trim();
+    });
+  }
+
+  userData[code]._saved = true;
+  userData[code]._ts = new Date().toISOString();
+
+  // Disable button while saving
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+
+  try {
+    await setDoc(doc(db, 'villages', code), userData[code]);
+
+    if(row){
+      row.style.transition='background 0.3s';
+      row.style.background='rgba(0,201,141,0.12)';
+      setTimeout(()=>{ row.style.background=''; }, 1000);
+    }
+    render();
+  } catch(e){
+    alert('❌ Could not save to database. Check your internet connection.');
+    if(btn){ btn.disabled=false; btn.textContent='💾 Save'; }
+  }
+}
+
+window.openModal = function(){ document.getElementById('modalOverlay').classList.add('open'); }
+window.closeModal = function(){ document.getElementById('modalOverlay').classList.remove('open'); }
+
+window.unlockRow = function(code){
+  document.getElementById('unlockPwdInput').value = '';
+  document.getElementById('unlockError').style.display = 'none';
+  document.getElementById('unlockModalOverlay').dataset.code = code;
+  document.getElementById('unlockModalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('unlockPwdInput').focus(), 100);
+}
+
+window.closeUnlockModal = function(){
+  document.getElementById('unlockModalOverlay').classList.remove('open');
+}
+
+window.confirmUnlock = async function(){
+  const pwd = document.getElementById('unlockPwdInput').value;
+  const code = document.getElementById('unlockModalOverlay').dataset.code;
+  if(pwd === 'Paajiunlock'){
+    try {
+      await updateDoc(doc(db, 'villages', code), { _saved: deleteField() });
+      if(userData[code]) delete userData[code]._saved;
+    } catch(e){
+      // Doc may not exist in Firestore yet, just update local
+      if(userData[code]) delete userData[code]._saved;
+    }
+    closeUnlockModal();
+    render();
+  } else {
+    document.getElementById('unlockError').style.display = 'block';
+    document.getElementById('unlockPwdInput').value = '';
+    document.getElementById('unlockPwdInput').focus();
+  }
+}
+
+window.confirmPrint = function(){
+  const t=document.getElementById('savedToast');
+  t.style.display='inline-block';
+  setTimeout(()=>t.style.display='none', 2500);
+
+  const opt = document.querySelector('input[name="printOpt"]:checked').value;
+  document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+
+  closeModal();
+
+  if(opt === 'all'){
+    // Show all rows for print
+    printRows([...villages]);
+  } else if(opt === 'filled'){
+    const filledVillages = villages.filter(v => {
+      const d = userData[v.c]||{};
+      return d.hamlet||d.hlb||d.pop||d.landmark||d.patwari;
+    });
+    if(!filledVillages.length){ alert('No rows have data entered yet.'); return; }
+    printRows(filledVillages);
+  } else {
+    // current page
+    const start=(page-1)*perPage;
+    printRows(filtered.slice(start, Math.min(start+perPage, filtered.length)));
+  }
+}
+
+function printRows(rows){
+  const tbody = document.getElementById('tbody');
+  // Temporarily render all chosen rows
+  const prevFiltered = filtered;
+  const prevPage = page;
+  const prevPerPage = perPage;
+
+  filtered = rows;
+  page = 1;
+  perPage = rows.length || 1;
+  render();
+
+  setTimeout(()=>{
+    window.print();
+    // Restore
+    filtered = prevFiltered;
+    page = prevPage;
+    perPage = prevPerPage;
+    render();
+  }, 300);
+}
+
+let filtered = [...villages];
+let sortKey = null, sortAsc = true;
+let page = 1, perPage = 25;
+
+window.onSearch = function() {
+  const q = document.getElementById('searchBox').value.toLowerCase().trim();
+  filtered = q ? villages.filter(v => v.n.toLowerCase().includes(q) || v.c.includes(q)) : [...villages];
+  page = 1;
+  render();
+}
+
+window.sortTable = function(key) {
+  if(sortKey===key) sortAsc=!sortAsc; else {sortKey=key; sortAsc=true;}
+  filtered.sort((a,b)=>{
+    let av,bv;
+    if(key==='area'){av=a.a;bv=b.a;}
+    else if(key==='villageCode'){av=a.c;bv=b.c;}
+    else if(key==='idx'){av=villages.indexOf(a);bv=villages.indexOf(b);}
+    else{av=a.n;bv=b.n;}
+    if(typeof av==='string') return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
+    return sortAsc?av-bv:bv-av;
+  });
+  page=1; render();
+}
+
+window.changePerPage = function(){
+  perPage=parseInt(document.getElementById('perPage').value)||145;
+  page=1; render();
+}
+
+function render(){
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  const total=filtered.length;
+  const totalPages=Math.ceil(total/perPage);
+  const start=(page-1)*perPage;
+  const end=Math.min(start+perPage,total);
+  const slice=filtered.slice(start,end);
+
+  document.getElementById('showFrom').textContent=total?start+1:0;
+  document.getElementById('showTo').textContent=end;
+  document.getElementById('totalCount').textContent=total;
+  document.getElementById('countBadge').textContent=total+' Records';
+  document.getElementById('footerNote').textContent=
+    total===villages.length?'All 145 villages · Raipur (002), Beawar, Rajasthan':
+    `${total} of 145 villages matching filter`;
+
+  if(!slice.length){
+    tbody.innerHTML='<tr><td colspan="14" class="no-results">No villages found.</td></tr>';
+    document.getElementById('pageBtns').innerHTML='';
+    return;
+  }
+
+  slice.forEach(v=>{
+    const gi=villages.indexOf(v)+1;
+    const dup=nameCount[v.n]>1;
+    const special=v.c==='8053';
+    const d=userData[v.c]||{};
+    const isLocked = !!d._saved;
+    const dis = isLocked ? 'disabled' : '';
+
+    // Format timestamp
+    let tsHtml = '<span class="ts-empty">—</span>';
+    if(d._ts){
+      const dt = new Date(d._ts);
+      const dateStr = dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const timeStr = dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+      tsHtml = `<span class="ts-date">${dateStr}</span><span class="ts-time">${timeStr}</span>`;
+    }
+
+    const tr=document.createElement('tr');
+    tr.id = 'row-'+v.c;
+    if(isLocked) tr.classList.add('locked');
+    tr.innerHTML=`
+      <td class="idx">${gi}</td>
+      <td><span class="vname">${v.n}${dup?'<span class="dup-tag">DUP</span>':''}</span><span class="vcode-sub">${v.c}</span></td>
+      <td><span class="loc-badge ${special?'special-code':''}">${v.c}</span></td>
+      <td><span class="loc-text">Rajasthan <span class="loc-code">(09)</span></span></td>
+      <td><span class="loc-text">Beawar <span class="loc-code">(20)</span></span></td>
+      <td><span class="loc-text">Raipur <span class="loc-code">(002)</span></span></td>
+      <td class="area-val">${v.a.toLocaleString()}</td>
+      <td><input class="inp inp-hamlet ${d.hamlet?'filled':''}" data-code="${v.c}" data-field="hamlet" type="text" placeholder="Comma separated…" value="${d.hamlet||''}" ${dis}/></td>
+      <td><input class="inp inp-num ${d.hlb?'filled':''}" data-code="${v.c}" data-field="hlb" type="number" min="0" placeholder="0" value="${d.hlb||''}" ${dis}/></td>
+      <td><input class="inp inp-pop ${d.pop?'filled':''}" data-code="${v.c}" data-field="pop" type="number" min="0" placeholder="0" value="${d.pop||''}" ${dis}/></td>
+      <td><input class="inp inp-landmark ${d.landmark?'filled':''}" data-code="${v.c}" data-field="landmark" type="text" placeholder="e.g. Near Temple…" value="${d.landmark||''}" ${dis}/></td>
+      <td><input class="inp inp-patwari ${d.patwari?'filled':''}" data-code="${v.c}" data-field="patwari" type="text" placeholder="Patwari name…" value="${d.patwari||''}" ${dis}/></td>
+      <td class="ts-cell">${tsHtml}</td>
+      <td class="save-td">
+        ${isLocked
+          ? `<span class="lock-badge">🔒 Locked</span>`
+          : `<button class="row-save-btn" data-code="${v.c}" onclick="saveRow('${v.c}', this)">💾 Save</button>`
+        }
+      </td>
+      <td class="unlock-td">
+        ${isLocked
+          ? `<button class="unlock-btn" onclick="unlockRow('${v.c}')">🔓 Unlock</button>`
+          : `<span class="unlock-na">—</span>`
+        }
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Live update userData on input — only if not locked
+  tbody.querySelectorAll('.inp:not([disabled])').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const code=inp.dataset.code, field=inp.dataset.field;
+      if(!userData[code]) userData[code]={};
+      userData[code][field]=inp.value.trim();
+      inp.classList.toggle('filled', !!inp.value.trim());
+    });
+  });
+
+  // Pagination
+  const pb=document.getElementById('pageBtns');
+  pb.innerHTML='';
+  const mk=(label,p,disabled,active)=>{
+    const b=document.createElement('button');
+    b.className='page-btn'+(active?' active':'');
+    b.textContent=label; b.disabled=!!disabled;
+    b.onclick=()=>{page=p;render();};
+    return b;
+  };
+  pb.appendChild(mk('←',page-1,page<=1));
+  let pages=[];
+  if(totalPages<=7){for(let i=1;i<=totalPages;i++)pages.push(i);}
+  else{
+    pages=[1];
+    if(page>3)pages.push('…');
+    for(let i=Math.max(2,page-1);i<=Math.min(totalPages-1,page+1);i++)pages.push(i);
+    if(page<totalPages-2)pages.push('…');
+    pages.push(totalPages);
+  }
+  pages.forEach(p=>{
+    if(p==='…'){const s=document.createElement('span');s.textContent='…';s.style.cssText='color:var(--muted);font-size:12px;padding:0 3px';pb.appendChild(s);}
+    else pb.appendChild(mk(p,p,false,p===page));
+  });
+  pb.appendChild(mk('→',page+1,page>=totalPages));
+}
+
+window.exportCSV = function(){
+  const h=['#','Village Name','Village Code','State','District','Sub-district','Area (ha)','Hamlet Name','No. of HLB','Est. Population (Patwari)','Landmark','Name of Patwari','Entered On','Status'];
+  const rows=villages.map((v,i)=>{
+    const d=userData[v.c]||{};
+    const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : '';
+    const status = d._saved ? 'Locked' : 'Pending';
+    return [i+1,v.n,v.c,'Rajasthan (09)','Beawar (20)','Raipur (002)',v.a,d.hamlet||'',d.hlb||'',d.pop||'',d.landmark||'',d.patwari||'',ts,status];
+  });
+  const csv=[h,...rows].map(r=>r.map(x=>`"${x}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='village-list-raipur-002-all145.csv';
+  a.click();
+}
+
+loadFromFirestore();
+</script>
+</body>
+</html>
