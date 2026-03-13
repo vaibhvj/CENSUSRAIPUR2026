@@ -18,6 +18,7 @@
     --white: #1a2a3a;
     --muted: #5a6e85;
     --success: #009965;
+    --pending: #b03060;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--navy); color: var(--white); font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; min-height: 100vh; }
@@ -36,19 +37,25 @@
   main { padding: 26px 28px 48px; }
 
   .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
-  .stat-card { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .stat-card { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: default; }
   .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .stat-card.s1::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
-  .stat-card.s2::before { background: linear-gradient(90deg, var(--teal), #006e6e); }
-  .stat-card.s3::before { background: linear-gradient(90deg, var(--blue), #1a5fa0); }
-  .stat-card.s4::before { background: linear-gradient(90deg, var(--success), #006e45); }
+  .stat-card.s2::before { background: linear-gradient(90deg, #b03060, #c04b0e); }
+  .stat-card.s3::before { background: linear-gradient(90deg, var(--success), #006e45); }
+  .stat-card.s4::before { background: linear-gradient(90deg, var(--blue), #1a5fa0); }
   .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
   .stat-value { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 500; margin-top: 6px; line-height: 1; }
   .stat-card.s1 .stat-value { color: var(--accent); }
-  .stat-card.s2 .stat-value { color: var(--teal); }
-  .stat-card.s3 .stat-value { color: var(--blue); }
-  .stat-card.s4 .stat-value { color: var(--success); }
+  .stat-card.s2 .stat-value { color: #b03060; }
+  .stat-card.s3 .stat-value { color: var(--success); }
+  .stat-card.s4 .stat-value { color: var(--blue); }
   .stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+
+  /* clickable stat cards */
+  .stat-card.clickable { cursor: pointer; transition: box-shadow 0.18s, border-color 0.18s; }
+  .stat-card.clickable:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.12); border-color: #b0c0d8; }
+  .stat-card.s2.active-filter { border-color: #b03060; box-shadow: 0 0 0 2px rgba(176,48,96,0.15); }
+  .stat-card.s3.active-filter { border-color: var(--success); box-shadow: 0 0 0 2px rgba(0,153,101,0.15); }
 
   .page-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
   .ptitle { display: flex; align-items: center; gap: 10px; }
@@ -63,6 +70,13 @@
   .search-box::placeholder { color: var(--muted); }
   .btn { background: transparent; border: 1px solid var(--accent); border-radius: 7px; padding: 8px 16px; color: var(--accent); font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
   .btn:hover { background: rgba(244,163,0,0.1); }
+
+  /* Pending filter button */
+  .btn-pending { background: transparent; border: 1px solid #b03060; border-radius: 7px; padding: 8px 16px; color: #b03060; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+  .btn-pending:hover { background: rgba(176,48,96,0.08); }
+  .btn-pending.active { background: rgba(176,48,96,0.12); border-color: #8a1a40; color: #8a1a40; }
+  .filter-badge { display: inline-block; background: rgba(176,48,96,0.15); border: 1px solid rgba(176,48,96,0.3); border-radius: 5px; padding: 3px 10px; font-size: 11px; color: #b03060; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+  .filter-badge.hidden { display: none; }
 
   .pagination-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
   .page-info { font-size: 11.5px; color: var(--muted); }
@@ -89,6 +103,10 @@
   td { padding: 11px 16px; vertical-align: middle; border-right: 1px solid rgba(208,219,232,0.5); font-size: 12.5px; }
   td:last-child { border-right: none; }
 
+  /* Pending row highlight */
+  tbody tr.pending-row { background: rgba(176,48,96,0.04) !important; }
+  tbody tr.pending-row:hover { background: rgba(176,48,96,0.08) !important; }
+
   .vname { font-weight: 600; color: #1a2a3a; }
   .vcode-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--teal); margin-top: 2px; display: block; }
   .loc-badge { display: inline-block; background: rgba(26,111,191,0.08); border: 1px solid rgba(26,111,191,0.2); border-radius: 4px; padding: 2px 8px; font-size: 11px; color: var(--blue); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
@@ -96,6 +114,7 @@
   .area-val { color: #1a5fa0; font-family: 'IBM Plex Mono', monospace; text-align: right; }
   .idx { color: rgba(106,130,160,0.45); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; text-align: center; }
   .dup-tag { display: inline-block; background: rgba(224,92,26,0.15); border: 1px solid rgba(224,92,26,0.3); border-radius: 3px; padding: 1px 5px; font-size: 9px; color: var(--accent2); margin-left: 5px; vertical-align: middle; font-weight: 600; letter-spacing: 0.04em; }
+  .pending-tag { display: inline-block; background: rgba(176,48,96,0.12); border: 1px solid rgba(176,48,96,0.3); border-radius: 3px; padding: 1px 5px; font-size: 9px; color: #b03060; margin-left: 5px; vertical-align: middle; font-weight: 600; letter-spacing: 0.04em; }
   .loc-text { color: #6a82a0; font-size: 12px; }
   .loc-code { color: var(--border); }
   .no-results { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
@@ -327,6 +346,73 @@
     .ptitle-bar { background: #1a3a6e !important; }
   }
   .print-header { display: none; }
+
+  /* VIEW DATA MODAL */
+  .view-modal {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 480px;
+    max-width: 95vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  }
+  .view-modal h3 { font-size: 15px; font-weight: 600; color: var(--teal); margin-bottom: 4px; }
+  .view-modal .vm-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; font-family: 'IBM Plex Mono', monospace; }
+  .vm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+  .vm-field { background: #f4f6fa; border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; }
+  .vm-field-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .vm-field-val { font-size: 13px; font-weight: 500; color: var(--white); font-family: 'IBM Plex Mono', monospace; word-break: break-word; }
+  .vm-field-val.empty { color: rgba(106,130,160,0.4); font-style: italic; font-size: 12px; }
+  .vm-field.hamlet-f { grid-column: 1 / -1; }
+  .vm-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600; margin-bottom: 16px; }
+  .vm-status.complete { background: rgba(0,153,101,0.12); border: 1px solid rgba(0,153,101,0.3); color: var(--success); }
+  .vm-status.incomplete { background: rgba(176,48,96,0.1); border: 1px solid rgba(176,48,96,0.3); color: #b03060; }
+
+  /* View button */
+  .row-view-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px;
+    background: rgba(26,111,191,0.08);
+    border: 1px solid rgba(26,111,191,0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--blue);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+    min-width: 60px;
+  }
+  .row-view-btn:hover { background: rgba(26,111,191,0.18); border-color: var(--blue); transform: scale(1.04); }
+  th.view-th { color: var(--blue); font-size: 10px; text-align: center; }
+  td.view-td { text-align: center; vertical-align: middle; }
+
+  /* Validation error highlight */
+  .inp.field-error {
+    border-color: #c04b0e !important;
+    background: rgba(192,75,14,0.07) !important;
+    animation: shake 0.3s ease;
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)}
+  }
+  .save-error-msg {
+    display: none;
+    background: rgba(192,75,14,0.1);
+    border: 1px solid rgba(192,75,14,0.35);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: var(--accent2);
+    font-weight: 600;
+    white-space: nowrap;
+    margin-top: 4px;
+    text-align: center;
+  }
+  td.save-td { text-align: center; vertical-align: middle; position: relative; }
 </style>
 </head>
 <body>
@@ -355,6 +441,40 @@
   </div>
 </div>
 
+<!-- VIEW DATA MODAL -->
+<div class="modal-overlay" id="viewModalOverlay" onclick="if(event.target===this)closeViewModal()">
+  <div class="view-modal">
+    <h3 id="vmTitle">👁 Village Data</h3>
+    <div class="vm-sub" id="vmSub">Code · Sub-district</div>
+    <div id="vmStatus" class="vm-status complete"></div>
+    <div class="vm-grid">
+      <div class="vm-field hamlet-f">
+        <div class="vm-field-label">🏘 Hamlet Names</div>
+        <div class="vm-field-val" id="vmHamlet">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">🏠 No. of HLB</div>
+        <div class="vm-field-val" id="vmHlb">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">👥 Est. Population</div>
+        <div class="vm-field-val" id="vmPop">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">📍 Landmark</div>
+        <div class="vm-field-val" id="vmLandmark">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">👤 Patwari Name</div>
+        <div class="vm-field-val" id="vmPatwari">—</div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <button class="modal-cancel" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- SAVE + PRINT MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="e=>e.target===this&&closeModal()">
   <div class="modal">
@@ -373,6 +493,13 @@
         <div>
           <div class="modal-opt-label">✅ Print only filled rows</div>
           <div class="modal-opt-sub">Only villages with at least one field entered</div>
+        </div>
+      </label>
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="pending" />
+        <div>
+          <div class="modal-opt-label">⏳ Print only pending rows</div>
+          <div class="modal-opt-sub">Villages with no data entered yet</div>
         </div>
       </label>
       <label class="modal-opt">
@@ -421,21 +548,28 @@
 
 <main>
   <div class="stats-row">
+    <!-- Card 1: Total Villages (unchanged) -->
     <div class="stat-card s1">
       <div class="stat-label">Total Villages</div>
       <div class="stat-value">145</div>
       <div class="stat-sub">Raipur Sub-district</div>
     </div>
-    <div class="stat-card s2">
-      <div class="stat-label">Total Area</div>
-      <div class="stat-value" id="totalArea">—</div>
-      <div class="stat-sub">hectares (total)</div>
+
+    <!-- Card 2: Pending Villages (NEW — replaces Total Area) -->
+    <div class="stat-card s2 clickable" id="statPendingCard" title="Click to filter pending villages" onclick="togglePendingFilter()">
+      <div class="stat-label">⏳ Pending Villages</div>
+      <div class="stat-value" id="pendingCount">—</div>
+      <div class="stat-sub" id="pendingSub">No data entered · click to filter</div>
     </div>
-    <div class="stat-card s3">
-      <div class="stat-label">Largest Village</div>
-      <div class="stat-value" id="largestVal" style="font-size:15px;margin-top:8px">—</div>
-      <div class="stat-sub" id="largestSub">by area</div>
+
+    <!-- Card 3: Filled Villages (NEW — replaces Largest Village) -->
+    <div class="stat-card s3 clickable" id="statFilledCard" title="Click to filter filled villages" onclick="toggleFilledFilter()">
+      <div class="stat-label">✅ Filled Villages</div>
+      <div class="stat-value" id="filledCount">—</div>
+      <div class="stat-sub" id="filledSub">At least one field entered · click to filter</div>
     </div>
+
+    <!-- Card 4: Duplicate Names (unchanged) -->
     <div class="stat-card s4">
       <div class="stat-label">Duplicate Names</div>
       <div class="stat-value">4</div>
@@ -456,6 +590,10 @@
         <span class="search-icon">🔍</span>
         <input class="search-box" id="searchBox" type="text" placeholder="Search village name or code…" oninput="onSearch()" />
       </div>
+      <!-- Pending filter button -->
+      <button class="btn-pending" id="pendingFilterBtn" onclick="togglePendingFilter()">⏳ Pending Only</button>
+      <!-- Active filter badge (shown when filter is active) -->
+      <span class="filter-badge hidden" id="filterBadge">Filter Active</span>
       <button class="save-btn" onclick="openModal()">💾 Save &amp; Print / PDF</button>
       <div class="saved-toast" id="savedToast">✓ Data Saved!</div>
       <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
@@ -495,6 +633,7 @@
             <th class="input-th patwari-th">👤 Name of Patwari</th>
             <th class="time-th">🕐 Entered On</th>
             <th class="save-th">💾 Save Row</th>
+            <th class="view-th">👁 View</th>
             <th class="unlock-th">🔓 Unlock</th>
           </tr>
         </thead>
@@ -508,7 +647,7 @@
   </div>
 </main>
 
-<footer>© 2026 &nbsp;|&nbsp; <span>Census Management and Monitoring System (CMMS)</span> &nbsp;|&nbsp; v0.15.23</footer>
+<footer>© 2026 &nbsp;|&nbsp; <span>Census Management and Monitoring System (CMMS)</span> &nbsp;|&nbsp; Design and Maintain by <span>Vaibhav Vijay BCI</span></footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -526,7 +665,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Show loading overlay
 function setLoading(on, msg='Loading data…'){
   document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
   document.getElementById('loadingMsg').textContent = msg;
@@ -584,21 +722,94 @@ const villages = [
   {c:"8053",n:"Bar",a:1507.33}
 ];
 
-// Duplicate detection
 const nameCount = {};
 villages.forEach(v => nameCount[v.n] = (nameCount[v.n]||0)+1);
 
-// Stats
-const totalArea = villages.reduce((s,v)=>s+v.a,0);
-const largest = villages.reduce((a,b)=>a.a>b.a?a:b);
-document.getElementById('totalArea').textContent = (totalArea/1000).toFixed(1)+'K';
-document.getElementById('largestVal').textContent = largest.n;
-document.getElementById('largestSub').textContent = largest.a.toLocaleString()+' ha · '+largest.c;
-
-// Persist entered data across pagination
 let userData = {};
 
-// Load all village data from Firestore
+// ── Helper: is a village "filled" (has any data entered)
+function isFilled(code){
+  const d = userData[code]||{};
+  return !!(d.hamlet||d.hlb||d.pop||d.landmark||d.patwari);
+}
+
+// ── Update the Pending / Filled stat cards
+function updateStatCards(){
+  const filledVillages = villages.filter(v => isFilled(v.c));
+  const pendingVillages = villages.filter(v => !isFilled(v.c));
+  const fc = filledVillages.length;
+  const pc = pendingVillages.length;
+  const pct = Math.round((fc/villages.length)*100);
+
+  document.getElementById('filledCount').textContent = fc;
+  document.getElementById('pendingCount').textContent = pc;
+  document.getElementById('filledSub').textContent = `${pct}% completion · click to filter`;
+  document.getElementById('pendingSub').textContent = `${100-pct}% remaining · click to filter`;
+}
+
+// ── Filter mode: null | 'pending' | 'filled'
+let activeFilter = null;
+
+window.togglePendingFilter = function(){
+  if(activeFilter === 'pending'){
+    activeFilter = null;
+  } else {
+    activeFilter = 'pending';
+  }
+  applyFilter();
+}
+
+window.toggleFilledFilter = function(){
+  if(activeFilter === 'filled'){
+    activeFilter = null;
+  } else {
+    activeFilter = 'filled';
+  }
+  applyFilter();
+}
+
+function applyFilter(){
+  const searchQ = document.getElementById('searchBox').value.toLowerCase().trim();
+  let base = searchQ ? villages.filter(v => v.n.toLowerCase().includes(searchQ)||v.c.includes(searchQ)) : [...villages];
+
+  if(activeFilter === 'pending'){
+    filtered = base.filter(v => !isFilled(v.c));
+  } else if(activeFilter === 'filled'){
+    filtered = base.filter(v => isFilled(v.c));
+  } else {
+    filtered = base;
+  }
+
+  // Update button + card visual states
+  const pendBtn = document.getElementById('pendingFilterBtn');
+  const badge = document.getElementById('filterBadge');
+  const pendCard = document.getElementById('statPendingCard');
+  const filledCard = document.getElementById('statFilledCard');
+
+  pendCard.classList.remove('active-filter');
+  filledCard.classList.remove('active-filter');
+  pendBtn.classList.remove('active');
+  badge.classList.add('hidden');
+
+  if(activeFilter === 'pending'){
+    pendBtn.classList.add('active');
+    pendBtn.textContent = '✕ Clear Pending Filter';
+    badge.textContent = 'Showing Pending Only';
+    badge.classList.remove('hidden');
+    pendCard.classList.add('active-filter');
+  } else if(activeFilter === 'filled'){
+    pendBtn.textContent = '⏳ Pending Only';
+    badge.textContent = 'Showing Filled Only';
+    badge.classList.remove('hidden');
+    filledCard.classList.add('active-filter');
+  } else {
+    pendBtn.textContent = '⏳ Pending Only';
+  }
+
+  page = 1;
+  render();
+}
+
 async function loadFromFirestore(){
   setLoading(true, 'Loading data from database…');
   try {
@@ -613,6 +824,7 @@ async function loadFromFirestore(){
       userData[docSnap.id] = docSnap.data();
     });
     setLoading(false);
+    updateStatCards();
     render();
   } catch(e){
     setLoading(false);
@@ -627,7 +839,8 @@ async function loadFromFirestore(){
     document.getElementById('dbErrorBanner').innerHTML =
       msg + '<br><span style="font-size:11px">👉 Go to <b>Firebase Console → Firestore → Rules</b> and set: <code style="background:#fee;padding:1px 5px;border-radius:3px">allow read, write: if true;</code> then save & publish.</span>';
     document.getElementById('dbErrorBanner').style.display = 'block';
-    render(); // show the table anyway (empty data)
+    updateStatCards();
+    render();
   }
 }
 
@@ -635,16 +848,47 @@ window.saveRow = async function(code, btn){
   if(!userData[code]) userData[code]={};
 
   const row = document.getElementById('row-'+code);
+
+  // Collect current input values
   if(row){
     row.querySelectorAll('.inp').forEach(inp=>{
       userData[code][inp.dataset.field] = inp.value.trim();
     });
   }
 
+  // ── VALIDATION: all 5 fields must be filled ──
+  const requiredFields = ['hamlet','hlb','pop','landmark','patwari'];
+  const missingFields = [];
+  if(row){
+    row.querySelectorAll('.inp').forEach(inp => inp.classList.remove('field-error'));
+    requiredFields.forEach(f => {
+      const val = userData[code][f];
+      if(!val || val === ''){
+        missingFields.push(f);
+        const inp = row.querySelector(`.inp[data-field="${f}"]`);
+        if(inp) inp.classList.add('field-error');
+      }
+    });
+  }
+  if(missingFields.length > 0){
+    // Show inline error message under save button
+    let errEl = row ? row.querySelector('.save-error-msg') : null;
+    if(errEl){
+      errEl.textContent = `⚠ Fill all ${missingFields.length} missing field${missingFields.length>1?'s':''}`;
+      errEl.style.display = 'block';
+      setTimeout(()=>{ errEl.style.display='none'; }, 3000);
+    }
+    // Remove error highlight after 2s
+    setTimeout(()=>{
+      if(row) row.querySelectorAll('.inp.field-error').forEach(inp=>inp.classList.remove('field-error'));
+    }, 2000);
+    return; // abort save
+  }
+  // ── END VALIDATION ──
+
   userData[code]._saved = true;
   userData[code]._ts = new Date().toISOString();
 
-  // Disable button while saving
   if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
 
   try {
@@ -655,7 +899,9 @@ window.saveRow = async function(code, btn){
       row.style.background='rgba(0,201,141,0.12)';
       setTimeout(()=>{ row.style.background=''; }, 1000);
     }
-    render();
+    updateStatCards();
+    // If pending filter is active, re-apply so saved row disappears from list
+    if(activeFilter) applyFilter(); else render();
   } catch(e){
     alert('❌ Could not save to database. Check your internet connection.');
     if(btn){ btn.disabled=false; btn.textContent='💾 Save'; }
@@ -664,6 +910,49 @@ window.saveRow = async function(code, btn){
 
 window.openModal = function(){ document.getElementById('modalOverlay').classList.add('open'); }
 window.closeModal = function(){ document.getElementById('modalOverlay').classList.remove('open'); }
+
+window.viewRow = function(code, name){
+  const d = userData[code] || {};
+  // Collect live values from inputs if row is currently rendered
+  const row = document.getElementById('row-'+code);
+  if(row){
+    row.querySelectorAll('.inp').forEach(inp=>{
+      if(inp.value.trim()) d[inp.dataset.field] = inp.value.trim();
+    });
+  }
+  const requiredFields = ['hamlet','hlb','pop','landmark','patwari'];
+  const filled = requiredFields.filter(f => d[f] && d[f] !== '');
+  const allFilled = filled.length === requiredFields.length;
+
+  document.getElementById('vmTitle').textContent = '👁 ' + name;
+  document.getElementById('vmSub').textContent = code + ' · Raipur (002), Beawar (20), Rajasthan (09)';
+
+  const statusEl = document.getElementById('vmStatus');
+  if(allFilled){
+    statusEl.className = 'vm-status complete';
+    statusEl.textContent = '✅ All fields filled';
+  } else if(filled.length === 0){
+    statusEl.className = 'vm-status incomplete';
+    statusEl.textContent = '⏳ No data entered yet';
+  } else {
+    statusEl.className = 'vm-status incomplete';
+    statusEl.textContent = `⚠ ${filled.length} of 5 fields filled`;
+  }
+
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if(val){ el.textContent = val; el.className = 'vm-field-val'; }
+    else { el.textContent = 'Not entered'; el.className = 'vm-field-val empty'; }
+  };
+  set('vmHamlet',  d.hamlet   || '');
+  set('vmHlb',     d.hlb      || '');
+  set('vmPop',     d.pop      || '');
+  set('vmLandmark',d.landmark || '');
+  set('vmPatwari', d.patwari  || '');
+
+  document.getElementById('viewModalOverlay').classList.add('open');
+}
+window.closeViewModal = function(){ document.getElementById('viewModalOverlay').classList.remove('open'); }
 
 window.unlockRow = function(code){
   document.getElementById('unlockPwdInput').value = '';
@@ -685,10 +974,10 @@ window.confirmUnlock = async function(){
       await updateDoc(doc(db, 'villages', code), { _saved: deleteField() });
       if(userData[code]) delete userData[code]._saved;
     } catch(e){
-      // Doc may not exist in Firestore yet, just update local
       if(userData[code]) delete userData[code]._saved;
     }
     closeUnlockModal();
+    updateStatCards();
     render();
   } else {
     document.getElementById('unlockError').style.display = 'block';
@@ -708,25 +997,22 @@ window.confirmPrint = function(){
   closeModal();
 
   if(opt === 'all'){
-    // Show all rows for print
     printRows([...villages]);
   } else if(opt === 'filled'){
-    const filledVillages = villages.filter(v => {
-      const d = userData[v.c]||{};
-      return d.hamlet||d.hlb||d.pop||d.landmark||d.patwari;
-    });
+    const filledVillages = villages.filter(v => isFilled(v.c));
     if(!filledVillages.length){ alert('No rows have data entered yet.'); return; }
     printRows(filledVillages);
+  } else if(opt === 'pending'){
+    const pendingVillages = villages.filter(v => !isFilled(v.c));
+    if(!pendingVillages.length){ alert('All villages are already filled!'); return; }
+    printRows(pendingVillages);
   } else {
-    // current page
     const start=(page-1)*perPage;
     printRows(filtered.slice(start, Math.min(start+perPage, filtered.length)));
   }
 }
 
 function printRows(rows){
-  const tbody = document.getElementById('tbody');
-  // Temporarily render all chosen rows
   const prevFiltered = filtered;
   const prevPage = page;
   const prevPerPage = perPage;
@@ -738,7 +1024,6 @@ function printRows(rows){
 
   setTimeout(()=>{
     window.print();
-    // Restore
     filtered = prevFiltered;
     page = prevPage;
     perPage = prevPerPage;
@@ -752,7 +1037,15 @@ let page = 1, perPage = 25;
 
 window.onSearch = function() {
   const q = document.getElementById('searchBox').value.toLowerCase().trim();
-  filtered = q ? villages.filter(v => v.n.toLowerCase().includes(q) || v.c.includes(q)) : [...villages];
+  let base = q ? villages.filter(v => v.n.toLowerCase().includes(q) || v.c.includes(q)) : [...villages];
+
+  if(activeFilter === 'pending'){
+    filtered = base.filter(v => !isFilled(v.c));
+  } else if(activeFilter === 'filled'){
+    filtered = base.filter(v => isFilled(v.c));
+  } else {
+    filtered = base;
+  }
   page = 1;
   render();
 }
@@ -789,12 +1082,16 @@ function render(){
   document.getElementById('showTo').textContent=end;
   document.getElementById('totalCount').textContent=total;
   document.getElementById('countBadge').textContent=total+' Records';
-  document.getElementById('footerNote').textContent=
-    total===villages.length?'All 145 villages · Raipur (002), Beawar, Rajasthan':
-    `${total} of 145 villages matching filter`;
+
+  let footerNote = '';
+  if(activeFilter === 'pending') footerNote = `⏳ ${total} pending villages · Raipur (002), Beawar, Rajasthan`;
+  else if(activeFilter === 'filled') footerNote = `✅ ${total} filled villages · Raipur (002), Beawar, Rajasthan`;
+  else if(total===villages.length) footerNote = 'All 145 villages · Raipur (002), Beawar, Rajasthan';
+  else footerNote = `${total} of 145 villages matching filter`;
+  document.getElementById('footerNote').textContent = footerNote;
 
   if(!slice.length){
-    tbody.innerHTML='<tr><td colspan="14" class="no-results">No villages found.</td></tr>';
+    tbody.innerHTML=`<tr><td colspan="16" class="no-results">${activeFilter==='pending'?'🎉 All villages have been filled in!':activeFilter==='filled'?'No filled villages yet.':'No villages found.'}</td></tr>`;
     document.getElementById('pageBtns').innerHTML='';
     return;
   }
@@ -805,9 +1102,10 @@ function render(){
     const special=v.c==='8053';
     const d=userData[v.c]||{};
     const isLocked = !!d._saved;
+    const hasFill = isFilled(v.c);
+    const isPending = !hasFill;
     const dis = isLocked ? 'disabled' : '';
 
-    // Format timestamp
     let tsHtml = '<span class="ts-empty">—</span>';
     if(d._ts){
       const dt = new Date(d._ts);
@@ -819,9 +1117,11 @@ function render(){
     const tr=document.createElement('tr');
     tr.id = 'row-'+v.c;
     if(isLocked) tr.classList.add('locked');
+    if(isPending && activeFilter === 'pending') tr.classList.add('pending-row');
+
     tr.innerHTML=`
       <td class="idx">${gi}</td>
-      <td><span class="vname">${v.n}${dup?'<span class="dup-tag">DUP</span>':''}</span><span class="vcode-sub">${v.c}</span></td>
+      <td><span class="vname">${v.n}${dup?'<span class="dup-tag">DUP</span>':''}${isPending?'<span class="pending-tag">PENDING</span>':''}</span><span class="vcode-sub">${v.c}</span></td>
       <td><span class="loc-badge ${special?'special-code':''}">${v.c}</span></td>
       <td><span class="loc-text">Rajasthan <span class="loc-code">(09)</span></span></td>
       <td><span class="loc-text">Beawar <span class="loc-code">(20)</span></span></td>
@@ -836,8 +1136,12 @@ function render(){
       <td class="save-td">
         ${isLocked
           ? `<span class="lock-badge">🔒 Locked</span>`
-          : `<button class="row-save-btn" data-code="${v.c}" onclick="saveRow('${v.c}', this)">💾 Save</button>`
+          : `<button class="row-save-btn" data-code="${v.c}" onclick="saveRow('${v.c}', this)">💾 Save</button>
+             <div class="save-error-msg"></div>`
         }
+      </td>
+      <td class="view-td">
+        <button class="row-view-btn" onclick="viewRow('${v.c}', '${v.n.replace(/'/g,"\\'")}')">👁 View</button>
       </td>
       <td class="unlock-td">
         ${isLocked
@@ -848,13 +1152,13 @@ function render(){
     tbody.appendChild(tr);
   });
 
-  // Live update userData on input — only if not locked
   tbody.querySelectorAll('.inp:not([disabled])').forEach(inp=>{
     inp.addEventListener('input', ()=>{
       const code=inp.dataset.code, field=inp.dataset.field;
       if(!userData[code]) userData[code]={};
       userData[code][field]=inp.value.trim();
       inp.classList.toggle('filled', !!inp.value.trim());
+      updateStatCards();
     });
   });
 
@@ -890,7 +1194,7 @@ window.exportCSV = function(){
   const rows=villages.map((v,i)=>{
     const d=userData[v.c]||{};
     const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : '';
-    const status = d._saved ? 'Locked' : 'Pending';
+    const status = d._saved ? 'Locked' : isFilled(v.c) ? 'Filled (Unsaved)' : 'Pending';
     return [i+1,v.n,v.c,'Rajasthan (09)','Beawar (20)','Raipur (002)',v.a,d.hamlet||'',d.hlb||'',d.pop||'',d.landmark||'',d.patwari||'',ts,status];
   });
   const csv=[h,...rows].map(r=>r.map(x=>`"${x}"`).join(',')).join('\n');
