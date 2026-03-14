@@ -424,6 +424,132 @@
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
+<!-- DEADLINE ANNOUNCEMENT MODAL -->
+<div id="deadlineModal" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(3px);">
+  <div style="background:#ffffff;border-radius:14px;padding:34px 36px;width:460px;max-width:94vw;box-shadow:0 24px 64px rgba(0,0,0,0.22);border-top:4px solid #c04b0e;font-family:'IBM Plex Sans',sans-serif;text-align:center;">
+
+    <!-- Icon + Title -->
+    <div style="font-size:36px;margin-bottom:10px;">⏰</div>
+    <div style="font-size:11px;font-weight:600;color:#c04b0e;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Important Notice</div>
+    <div style="font-size:18px;font-weight:700;color:#1a2a3a;margin-bottom:6px;">Data Entry Closing Soon</div>
+    <div style="font-size:12.5px;color:#5a6e85;margin-bottom:22px;line-height:1.6;">
+      All village data entry for <strong style="color:#c97d00">Raipur (002)</strong> must be completed before:
+    </div>
+
+    <!-- Deadline date/time highlight -->
+    <div style="background:linear-gradient(135deg,#fff5ee,#fff0e8);border:1.5px solid rgba(192,75,14,0.3);border-radius:10px;padding:14px 20px;margin-bottom:22px;">
+      <div style="font-size:20px;font-weight:700;color:#c04b0e;font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em;">15 March 2026 &nbsp;·&nbsp; 12:00 PM</div>
+      <div style="font-size:11px;color:#a04030;margin-top:4px;">Indian Standard Time (IST)</div>
+    </div>
+
+    <!-- Countdown -->
+    <div style="margin-bottom:24px;">
+      <div style="font-size:10px;color:#5a6e85;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Time Remaining</div>
+      <div id="cdContainer" style="display:flex;justify-content:center;gap:10px;">
+        <div class="cd-box" id="cd-days"></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-box" id="cd-hours"></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-box" id="cd-mins"></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-box" id="cd-secs"></div>
+      </div>
+    </div>
+
+    <!-- Proceed button -->
+    <button onclick="closeDeadlineModal()" style="background:linear-gradient(135deg,#007a7a,#006060);color:#fff;border:none;border-radius:8px;padding:11px 36px;font-size:13px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;letter-spacing:0.04em;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      ✓ Understood — Continue to Data Entry
+    </button>
+
+    <div style="font-size:10.5px;color:#a0b0c0;margin-top:14px;">Census of India 2027 · CMMS · Raipur Charge</div>
+  </div>
+</div>
+
+<style>
+  .cd-box {
+    background: #1a2a3a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 60px;
+    text-align: center;
+    position: relative;
+  }
+  .cd-box .cd-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    color: #00c8a0;
+    display: block;
+    line-height: 1;
+  }
+  .cd-box .cd-lbl {
+    font-size: 9px;
+    color: #5a7a90;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+    display: block;
+  }
+  .cd-box.expired .cd-num { color: #c04b0e; }
+  .cd-sep {
+    font-size: 22px;
+    font-weight: 700;
+    color: #a0b4c8;
+    align-self: center;
+    padding-bottom: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+
+<script>
+  const DEADLINE = new Date('2026-03-15T12:00:00+05:30');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function updateCountdown(){
+    const now = new Date();
+    const diff = DEADLINE - now;
+
+    const daysEl  = document.getElementById('cd-days');
+    const hoursEl = document.getElementById('cd-hours');
+    const minsEl  = document.getElementById('cd-mins');
+    const secsEl  = document.getElementById('cd-secs');
+
+    if(!daysEl) return;
+
+    if(diff <= 0){
+      ['cd-days','cd-hours','cd-mins','cd-secs'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el){ el.innerHTML='<span class="cd-num">00</span><span class="cd-lbl">'+id.replace('cd-','')+'</span>'; el.classList.add('expired'); }
+      });
+      clearInterval(cdTimer);
+      return;
+    }
+
+    const days  = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins  = Math.floor((diff % 3600000)  / 60000);
+    const secs  = Math.floor((diff % 60000)    / 1000);
+
+    daysEl.innerHTML  = `<span class="cd-num">${pad(days)}</span><span class="cd-lbl">Days</span>`;
+    hoursEl.innerHTML = `<span class="cd-num">${pad(hours)}</span><span class="cd-lbl">Hours</span>`;
+    minsEl.innerHTML  = `<span class="cd-num">${pad(mins)}</span><span class="cd-lbl">Mins</span>`;
+    secsEl.innerHTML  = `<span class="cd-num">${pad(secs)}</span><span class="cd-lbl">Secs</span>`;
+
+    // Turn red when less than 1 hour left
+    const urgent = diff < 3600000;
+    [daysEl,hoursEl,minsEl,secsEl].forEach(el=>{ if(urgent) el.classList.add('expired'); });
+  }
+
+  updateCountdown();
+  const cdTimer = setInterval(updateCountdown, 1000);
+
+  function closeDeadlineModal(){
+    document.getElementById('deadlineModal').style.display = 'none';
+    clearInterval(cdTimer);
+  }
+</script>
+
 <!-- DB ERROR BANNER -->
 <div id="dbErrorBanner" style="display:none;background:#fff5f2;border:1.5px solid #f4b8a0;border-radius:8px;padding:12px 18px;margin:14px 28px 0;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;color:#7a2a0a;line-height:1.7;"></div>
 
@@ -647,7 +773,7 @@
   </div>
 </main>
 
-<footer>© 2026 &nbsp;|&nbsp; <span>Census Management and Monitoring System (CMMS)</span> &nbsp;|&nbsp; Design and Maintain by <span>Vaibhav Vijay (BCI)</span></footer>
+<footer>© 2026 &nbsp;|&nbsp; <span>Census Management and Monitoring System (CMMS)</span> &nbsp;|&nbsp; Design and Maintain by <span>Vaibhav Vijay BCI</span></footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
