@@ -363,4 +363,1035 @@
   .vm-field { background: #f4f6fa; border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; }
   .vm-field-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
   .vm-field-val { font-size: 13px; font-weight: 500; color: var(--white); font-family: 'IBM Plex Mono', monospace; word-break: break-word; }
-  .vm-field-val.empty { color: rgba(106,130,160,0.4); font-style: 
+  .vm-field-val.empty { color: rgba(106,130,160,0.4); font-style: italic; font-size: 12px; }
+  .vm-field.hamlet-f { grid-column: 1 / -1; }
+  .vm-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600; margin-bottom: 16px; }
+  .vm-status.complete { background: rgba(0,153,101,0.12); border: 1px solid rgba(0,153,101,0.3); color: var(--success); }
+  .vm-status.incomplete { background: rgba(176,48,96,0.1); border: 1px solid rgba(176,48,96,0.3); color: #b03060; }
+
+  /* View button */
+  .row-view-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px;
+    background: rgba(26,111,191,0.08);
+    border: 1px solid rgba(26,111,191,0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--blue);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+    min-width: 60px;
+  }
+  .row-view-btn:hover { background: rgba(26,111,191,0.18); border-color: var(--blue); transform: scale(1.04); }
+  th.view-th { color: var(--blue); font-size: 10px; text-align: center; }
+  td.view-td { text-align: center; vertical-align: middle; }
+
+  /* Validation error highlight */
+  .inp.field-error {
+    border-color: #c04b0e !important;
+    background: rgba(192,75,14,0.07) !important;
+    animation: shake 0.3s ease;
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)}
+  }
+  .save-error-msg {
+    display: none;
+    background: rgba(192,75,14,0.1);
+    border: 1px solid rgba(192,75,14,0.35);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: var(--accent2);
+    font-weight: 600;
+    white-space: nowrap;
+    margin-top: 4px;
+    text-align: center;
+  }
+  td.save-td { text-align: center; vertical-align: middle; position: relative; }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="display:flex;position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
+  <div style="width:40px;height:40px;border:4px solid #d0dbe8;border-top-color:#007a7a;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div id="loadingMsg" style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#5a6e85;">Loading data…</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<!-- DEADLINE ANNOUNCEMENT MODAL -->
+<div id="deadlineModal" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(3px);">
+  <div style="background:#ffffff;border-radius:14px;padding:34px 36px;width:460px;max-width:94vw;box-shadow:0 24px 64px rgba(0,0,0,0.22);border-top:4px solid #c04b0e;font-family:'IBM Plex Sans',sans-serif;text-align:center;">
+
+    <!-- Icon + Title -->
+    <div style="font-size:36px;margin-bottom:10px;">⏰</div>
+    <div style="font-size:11px;font-weight:600;color:#c04b0e;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Important Notice</div>
+    <div style="font-size:18px;font-weight:700;color:#1a2a3a;margin-bottom:6px;">Data Entry Closing Soon</div>
+    <div style="font-size:12.5px;color:#5a6e85;margin-bottom:22px;line-height:1.6;">
+      All village data entry for <strong style="color:#c97d00">Raipur (002)</strong> must be completed before:
+    </div>
+
+    <!-- Deadline date/time highlight -->
+    <div style="background:linear-gradient(135deg,#fff5ee,#fff0e8);border:1.5px solid rgba(192,75,14,0.3);border-radius:10px;padding:14px 20px;margin-bottom:22px;">
+      <div style="font-size:20px;font-weight:700;color:#c04b0e;font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em;">15 March 2026 &nbsp;·&nbsp; 12:00 AM</div>
+      <div style="font-size:11px;color:#a04030;margin-top:4px;">Indian Standard Time (IST)</div>
+    </div>
+
+    <!-- Countdown -->
+    <div style="margin-bottom:24px;">
+      <div style="font-size:10px;color:#5a6e85;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Time Remaining</div>
+      <div id="cdContainer" style="display:flex;justify-content:center;gap:10px;">
+        <div class="cd-box" id="cd-days"></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-box" id="cd-hours"></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-box" id="cd-mins"></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-box" id="cd-secs"></div>
+      </div>
+    </div>
+
+    <!-- Proceed button -->
+    <button onclick="closeDeadlineModal()" style="background:linear-gradient(135deg,#007a7a,#006060);color:#fff;border:none;border-radius:8px;padding:11px 36px;font-size:13px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;letter-spacing:0.04em;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      ✓ Understood — Continue to Data Entry
+    </button>
+
+    <div style="font-size:10.5px;color:#a0b0c0;margin-top:14px;">Census of India 2027 · CMMS · Raipur Charge</div>
+  </div>
+</div>
+
+<style>
+  .cd-box {
+    background: #1a2a3a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 60px;
+    text-align: center;
+    position: relative;
+  }
+  .cd-box .cd-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    color: #00c8a0;
+    display: block;
+    line-height: 1;
+  }
+  .cd-box .cd-lbl {
+    font-size: 9px;
+    color: #5a7a90;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+    display: block;
+  }
+  .cd-box.expired .cd-num { color: #c04b0e; }
+  .cd-sep {
+    font-size: 22px;
+    font-weight: 700;
+    color: #a0b4c8;
+    align-self: center;
+    padding-bottom: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+
+<script>
+  const DEADLINE = new Date('2026-03-16T00:00:00+05:30');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function updateCountdown(){
+    const now = new Date();
+    const diff = DEADLINE - now;
+
+    const daysEl  = document.getElementById('cd-days');
+    const hoursEl = document.getElementById('cd-hours');
+    const minsEl  = document.getElementById('cd-mins');
+    const secsEl  = document.getElementById('cd-secs');
+
+    if(!daysEl) return;
+
+    if(diff <= 0){
+      ['cd-days','cd-hours','cd-mins','cd-secs'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el){ el.innerHTML='<span class="cd-num">00</span><span class="cd-lbl">'+id.replace('cd-','')+'</span>'; el.classList.add('expired'); }
+      });
+      clearInterval(cdTimer);
+      return;
+    }
+
+    const days  = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins  = Math.floor((diff % 3600000)  / 60000);
+    const secs  = Math.floor((diff % 60000)    / 1000);
+
+    daysEl.innerHTML  = `<span class="cd-num">${pad(days)}</span><span class="cd-lbl">Days</span>`;
+    hoursEl.innerHTML = `<span class="cd-num">${pad(hours)}</span><span class="cd-lbl">Hours</span>`;
+    minsEl.innerHTML  = `<span class="cd-num">${pad(mins)}</span><span class="cd-lbl">Mins</span>`;
+    secsEl.innerHTML  = `<span class="cd-num">${pad(secs)}</span><span class="cd-lbl">Secs</span>`;
+
+    // Turn red when less than 1 hour left
+    const urgent = diff < 3600000;
+    [daysEl,hoursEl,minsEl,secsEl].forEach(el=>{ if(urgent) el.classList.add('expired'); });
+  }
+
+  updateCountdown();
+  const cdTimer = setInterval(updateCountdown, 1000);
+
+  function closeDeadlineModal(){
+    document.getElementById('deadlineModal').style.display = 'none';
+    clearInterval(cdTimer);
+  }
+</script>
+
+<!-- DB ERROR BANNER -->
+<div id="dbErrorBanner" style="display:none;background:#fff5f2;border:1.5px solid #f4b8a0;border-radius:8px;padding:12px 18px;margin:14px 28px 0;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;color:#7a2a0a;line-height:1.7;"></div>
+
+<!-- UNLOCK PASSWORD MODAL -->
+<div class="modal-overlay" id="unlockModalOverlay">
+  <div class="modal" style="width:360px">
+    <h3>🔓 Unlock Row</h3>
+    <p>Enter the password to unlock and edit this row.</p>
+    <input type="password" id="unlockPwdInput" placeholder="Enter password…" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none;margin-bottom:8px;background:#f8f9fc;color:var(--white);" onkeydown="if(event.key==='Enter')confirmUnlock()" />
+    <div id="unlockError" style="display:none;color:#c04b0e;font-size:11.5px;margin-bottom:10px;">❌ Incorrect password. Please try again.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+      <button class="modal-confirm" style="background:linear-gradient(135deg,#c04b0e,#c97d00)" onclick="confirmUnlock()">Unlock →</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW DATA MODAL -->
+<div class="modal-overlay" id="viewModalOverlay" onclick="if(event.target===this)closeViewModal()">
+  <div class="view-modal">
+    <h3 id="vmTitle">👁 Village Data</h3>
+    <div class="vm-sub" id="vmSub">Code · Sub-district</div>
+    <div id="vmStatus" class="vm-status complete"></div>
+    <div class="vm-grid">
+      <div class="vm-field hamlet-f">
+        <div class="vm-field-label">🏘 Hamlet Names</div>
+        <div class="vm-field-val" id="vmHamlet">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">🏠 No. of HLB</div>
+        <div class="vm-field-val" id="vmHlb">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">👥 Est. Population</div>
+        <div class="vm-field-val" id="vmPop">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">📍 Landmark</div>
+        <div class="vm-field-val" id="vmLandmark">—</div>
+      </div>
+      <div class="vm-field">
+        <div class="vm-field-label">👤 Patwari Name</div>
+        <div class="vm-field-val" id="vmPatwari">—</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="downloadRowCSV()" style="display:flex;align-items:center;gap:6px;background:rgba(0,122,122,0.08);border:1px solid rgba(0,122,122,0.35);border-radius:7px;padding:8px 14px;color:#007a7a;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(0,122,122,0.18)'" onmouseout="this.style.background='rgba(0,122,122,0.08)'">
+          ⬇ Download CSV
+        </button>
+        <button onclick="downloadRowTxt()" style="display:flex;align-items:center;gap:6px;background:rgba(26,111,191,0.08);border:1px solid rgba(26,111,191,0.3);border-radius:7px;padding:8px 14px;color:#1a6fbf;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(26,111,191,0.18)'" onmouseout="this.style.background='rgba(26,111,191,0.08)'">
+          📄 Download TXT
+        </button>
+      </div>
+      <button class="modal-cancel" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE + PRINT MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="e=>e.target===this&&closeModal()">
+  <div class="modal">
+    <h3>💾 Save &amp; Print / PDF</h3>
+    <p>Your data will be saved to browser memory, then you can print or export as PDF.</p>
+    <div class="modal-opts">
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="all" checked />
+        <div>
+          <div class="modal-opt-label">🖨 Print all 145 villages</div>
+          <div class="modal-opt-sub">Full table with all entered data</div>
+        </div>
+      </label>
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="filled" />
+        <div>
+          <div class="modal-opt-label">✅ Print only filled rows</div>
+          <div class="modal-opt-sub">Only villages with at least one field entered</div>
+        </div>
+      </label>
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="pending" />
+        <div>
+          <div class="modal-opt-label">⏳ Print only pending rows</div>
+          <div class="modal-opt-sub">Villages with no data entered yet</div>
+        </div>
+      </label>
+      <label class="modal-opt">
+        <input type="radio" name="printOpt" value="current" />
+        <div>
+          <div class="modal-opt-label">📄 Print current page only</div>
+          <div class="modal-opt-sub">Only the rows visible right now</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmPrint()">Save &amp; Print →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT HEADER (visible only when printing) -->
+<div class="print-header" style="padding:0 0 14px 0;">
+  <div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid #1a3a6e;padding-bottom:10px;margin-bottom:12px;">
+    <div style="font-size:22px;">🏛️</div>
+    <div>
+      <div style="font-size:13pt;font-weight:700;color:#1a3a6e;letter-spacing:0.05em">CENSUS OF INDIA 2027</div>
+      <div style="font-size:9pt;color:#555">Village Register · Raipur (002), Beawar (20), Rajasthan (09) · CMMS v0.15.23</div>
+    </div>
+    <div style="margin-left:auto;font-size:9pt;color:#555">Printed: <span id="printDate"></span></div>
+  </div>
+</div>
+
+<header>
+  <div class="h-left">
+    <div class="emblem">🏛️</div>
+    <div class="h-text">
+      <h1>Census of India 2027</h1>
+      <p>Office of the Registrar General &amp; Census Commissioner · Ministry of Home Affairs, GoI</p>
+    </div>
+  </div>
+  <div class="user-chip">NARENDRA BAPERIA — chv_0920002</div>
+</header>
+
+<div class="breadcrumb">
+  <b>HLO Management</b><span class="sep">›</span>
+  <b>Village Register</b><span class="sep">›</span>
+  Village List — Raipur (002), Beawar (20), Rajasthan (09)
+</div>
+
+<main>
+  <div class="stats-row">
+    <!-- Card 1: Total Villages (unchanged) -->
+    <div class="stat-card s1">
+      <div class="stat-label">Total Villages</div>
+      <div class="stat-value">145</div>
+      <div class="stat-sub">Raipur Sub-district</div>
+    </div>
+
+    <!-- Card 2: Pending Villages (NEW — replaces Total Area) -->
+    <div class="stat-card s2 clickable" id="statPendingCard" title="Click to filter pending villages" onclick="togglePendingFilter()">
+      <div class="stat-label">⏳ Pending Villages</div>
+      <div class="stat-value" id="pendingCount">—</div>
+      <div class="stat-sub" id="pendingSub">No data entered · click to filter</div>
+    </div>
+
+    <!-- Card 3: Filled Villages (NEW — replaces Largest Village) -->
+    <div class="stat-card s3 clickable" id="statFilledCard" title="Click to filter filled villages" onclick="toggleFilledFilter()">
+      <div class="stat-label">✅ Filled Villages</div>
+      <div class="stat-value" id="filledCount">—</div>
+      <div class="stat-sub" id="filledSub">At least one field entered · click to filter</div>
+    </div>
+
+    <!-- Card 4: Duplicate Names (unchanged) -->
+    <div class="stat-card s4">
+      <div class="stat-label">Duplicate Names</div>
+      <div class="stat-value">4</div>
+      <div class="stat-sub">Devnagar · Sodpura · Naharpura · Sabalpura</div>
+    </div>
+  </div>
+
+  <div class="page-title-row">
+    <div class="ptitle">
+      <div class="ptitle-bar"></div>
+      <div>
+        <h2>Village List</h2>
+        <p>Rajasthan (09) &nbsp;›&nbsp; Beawar (20) &nbsp;›&nbsp; Raipur (002) &nbsp;·&nbsp; <strong style="color:var(--accent)">145</strong> villages total</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-box" id="searchBox" type="text" placeholder="Search village name or code…" oninput="onSearch()" />
+      </div>
+      <!-- Pending filter button -->
+      <button class="btn-pending" id="pendingFilterBtn" onclick="togglePendingFilter()">⏳ Pending Only</button>
+      <!-- Active filter badge (shown when filter is active) -->
+      <span class="filter-badge hidden" id="filterBadge">Filter Active</span>
+      <button class="save-btn" onclick="openModal()">💾 Save &amp; Print / PDF</button>
+      <div class="saved-toast" id="savedToast">✓ Data Saved!</div>
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="pagination-row">
+    <div class="page-info">Showing <span id="showFrom">1</span>–<span id="showTo">25</span> of <span id="totalCount">145</span> villages</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted)">Rows per page:</span>
+      <select class="per-page-select" id="perPage" onchange="changePerPage()">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="145">All</option>
+      </select>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px" onclick="sortTable('idx')"># <span class="si">⇅</span></th>
+            <th onclick="sortTable('villageName')">Village / Town <span class="si">⇅</span></th>
+            <th onclick="sortTable('villageCode')">Code <span class="si">⇅</span></th>
+            <th>State</th>
+            <th>District</th>
+            <th>Sub-district</th>
+            <th onclick="sortTable('area')" style="text-align:right">Area (ha) <span class="si">⇅</span></th>
+            <th class="input-th">🏘 Hamlet Name</th>
+            <th class="input-th">🏠 No. of HLB</th>
+            <th class="input-th">👥 Est. Population<br><span style="font-size:9px;opacity:0.7">(by Patwari)</span></th>
+            <th class="input-th landmark-th">📍 Landmark</th>
+            <th class="input-th patwari-th">👤 Name of Patwari</th>
+            <th class="time-th">🕐 Entered On</th>
+            <th class="save-th">💾 Save Row</th>
+            <th class="view-th">👁 View</th>
+            <th class="unlock-th">🔓 Unlock</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <p id="footerNote">All 145 villages · Raipur (002), Beawar, Rajasthan</p>
+      <div class="count-badge" id="countBadge">145 Records</div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 &nbsp;|&nbsp; <span>Census Management and Monitoring System (CMMS)</span> &nbsp;|&nbsp; Design and Maintain by <span>Vaibhav Vijay BCI</span></footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteField, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyByFepFRHGoqUI0IfmJtn3NR_kUsnA2_Sk",
+  authDomain: "village-cmms.firebaseapp.com",
+  projectId: "village-cmms",
+  storageBucket: "village-cmms.firebasestorage.app",
+  messagingSenderId: "298945981163",
+  appId: "1:298945981163:web:30d3cd4c44f34c4f73acae"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function setLoading(on, msg='Loading data…'){
+  document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+  document.getElementById('loadingMsg').textContent = msg;
+}
+
+const villages = [
+  {c:"0001",n:"Deoli Kalan",a:4801.35},{c:"0002",n:"Seengla",a:440.93},{c:"0003",n:"Basni Kaviyan",a:384.75},
+  {c:"0004",n:"Nokh",a:381.64},{c:"0005",n:"Nimbera Kalan",a:1951},{c:"0006",n:"Basni Dadhwariyan",a:311.54},
+  {c:"0007",n:"Rampura Kalan",a:1205.74},{c:"0008",n:"Mohra Kalan",a:1093},{c:"0009",n:"Banseeya",a:1965},
+  {c:"0010",n:"Peepaliya Kalan",a:1559.96},{c:"0011",n:"Karmawas Maliyan",a:823},{c:"0012",n:"Kushalpura",a:2420},
+  {c:"0013",n:"Bagiyara",a:858.22},{c:"0014",n:"Aakeli",a:421.63},{c:"0015",n:"Leelamba",a:1566.06},
+  {c:"0016",n:"Madelav",a:1323.37},{c:"0017",n:"Bali",a:291},{c:"0018",n:"Beechardi",a:319},
+  {c:"0019",n:"Jhoontha",a:2843},{c:"0020",n:"Guriya",a:790.58},{c:"0021",n:"Sabalpura",a:1141.36},
+  {c:"0022",n:"Chanwadiya Khurd",a:857.56},{c:"0023",n:"Kalakot",a:520.74},{c:"0024",n:"Devnagar",a:387.77},
+  {c:"0025",n:"Kalab Kalan",a:396.19},{c:"0026",n:"Pachanpura",a:1899.1},{c:"0027",n:"Mohra Khurd",a:656.16},
+  {c:"0028",n:"Lawacha",a:751.97},{c:"0029",n:"Deepawas",a:579.19},{c:"0030",n:"Megarda",a:275.4},
+  {c:"0031",n:"Makarwali",a:182},{c:"0032",n:"Fata Khera",a:176.55},{c:"0033",n:"Relmagra",a:935.19},
+  {c:"0034",n:"Jhala Ki Chauki",a:504.38},{c:"0035",n:"Birantiya Khurd",a:2475.45},{c:"0036",n:"Birantiya Kalan",a:1827.51},
+  {c:"0037",n:"Dholi Dhed",a:358.38},{c:"0038",n:"Bogasani Khurd",a:317.95},{c:"0039",n:"Beesawas Khurd",a:67.87},
+  {c:"0040",n:"Veervasani",a:82.66},{c:"0041",n:"Beesawas Kalan",a:50.35},{c:"0042",n:"Hajiwas",a:633},
+  {c:"0043",n:"Dhoolkot",a:793},{c:"0044",n:"Lawamali",a:206},{c:"0045",n:"Khokhari",a:748},
+  {c:"0046",n:"Kheramamawas",a:575},{c:"0047",n:"Mesiya",a:1407},{c:"0048",n:"Chanwadiya Kalan",a:368.13},
+  {c:"0049",n:"Loharo Ka Badiya",a:509},{c:"0050",n:"Boontiwas",a:2393},{c:"0051",n:"Naharpura",a:1076.04},
+  {c:"0052",n:"Ramawas",a:550.57},{c:"0053",n:"Gopalpura",a:894.89},{c:"0054",n:"Devgarh",a:560},
+  {c:"0055",n:"Jhalamand",a:530.12},{c:"0056",n:"Mohra",a:829.09},{c:"0057",n:"Amba",a:188.27},
+  {c:"0058",n:"Peelpaya",a:167.48},{c:"0059",n:"Devnagar",a:347.44},{c:"0060",n:"Nahargarh",a:733.35},
+  {c:"0061",n:"Kesharpura",a:320.81},{c:"0062",n:"Rawaniya",a:519},{c:"0063",n:"Shrinagar",a:74.06},
+  {c:"0064",n:"Dujodiya",a:166.58},{c:"0065",n:"Naya Badiya",a:284.95},{c:"0066",n:"Rampura",a:206},
+  {c:"0067",n:"Sodpura",a:380.19},{c:"0068",n:"Karanpura",a:292.52},{c:"0069",n:"Sumel",a:1394.28},
+  {c:"0070",n:"Naibala",a:1009.98},{c:"0071",n:"Khera",a:535.6},{c:"0072",n:"Pratapgarh",a:932.95},
+  {c:"0073",n:"Naharpura",a:448.78},{c:"0074",n:"Chadhawaton Ki Dhani",a:606.99},{c:"0075",n:"Bhanwariya",a:628.94},
+  {c:"0076",n:"Kolpura",a:503.24},{c:"0077",n:"Ramgarh",a:424.25},{c:"0078",n:"Babra",a:1219.68},
+  {c:"0079",n:"Naya Gaon",a:250.91},{c:"0080",n:"Patan",a:653.2},{c:"0081",n:"Nanana",a:808.38},
+  {c:"0082",n:"Rawat Khera",a:253},{c:"0083",n:"Giri",a:1308.13},{c:"0084",n:"Sodpura",a:505.42},
+  {c:"0085",n:"Chainpura",a:185.15},{c:"0086",n:"Deoli Khurd",a:249.02},{c:"0087",n:"Shyampura",a:493.26},
+  {c:"0088",n:"Shahpura",a:165.25},{c:"0089",n:"Ratdiya",a:1427.27},{c:"0090",n:"Baripol",a:857},
+  {c:"0091",n:"Salakot",a:319},{c:"0092",n:"Jagmal Pura",a:193.73},{c:"0093",n:"Devnagar",a:282.16},
+  {c:"0094",n:"Miyapuriya",a:71},{c:"0095",n:"Amarpura",a:354},{c:"0096",n:"Chang",a:654.12},
+  {c:"0097",n:"Lakhina Panabaori",a:37},{c:"0098",n:"Ramgarh Chang",a:160},{c:"0099",n:"Amargarh Chang",a:96.58},
+  {c:"0100",n:"Chitar",a:762},{c:"0101",n:"Sailpura",a:195},{c:"0102",n:"Hathibhata",a:117},
+  {c:"0103",n:"Kanecha Udawatan",a:145.16},{c:"0104",n:"Relra",a:524.39},{c:"0105",n:"Chhapriya",a:74},
+  {c:"0106",n:"Sanderiya",a:237},{c:"0107",n:"Gavali Badiya",a:213},{c:"0108",n:"Jheentra",a:1049.67},
+  {c:"0109",n:"Jaitpura",a:748},{c:"0110",n:"Aashapura Nagar",a:46.28},{c:"0111",n:"Kesarpura",a:139.98},
+  {c:"0112",n:"Kanpura",a:1992},{c:"0113",n:"Lalpura",a:57},{c:"0114",n:"Saradhana",a:385},
+  {c:"0115",n:"Shergarh",a:103},{c:"0116",n:"Khera Sagrotan",a:55},{c:"0117",n:"Kotri",a:232},
+  {c:"0118",n:"Manpura",a:776},{c:"0119",n:"Sabalpura",a:154},{c:"0120",n:"Sendara",a:361},
+  {c:"0121",n:"Kurantiya",a:160},{c:"0122",n:"Ramgarh Sedontan",a:389},{c:"0123",n:"Borwar",a:1840.28},
+  {c:"0124",n:"Dholiya",a:302},{c:"0125",n:"Asan Tiloriya",a:201.12},{c:"0126",n:"Kaya Bheela",a:1336},
+  {c:"0127",n:"Kanuja",a:3244},{c:"0128",n:"Bhairu Ka Naka",a:289.25},{c:"0129",n:"Chak Deepawas",a:238},
+  {c:"0130",n:"Malni",a:310.23},{c:"0131",n:"Balloo Pura",a:1318.32},{c:"0132",n:"Kalab Khurd",a:1236.28},
+  {c:"0133",n:"Peepaliya Badia",a:331.52},{c:"0134",n:"Asan Jilelao",a:1080.64},{c:"0135",n:"Kalaliya",a:807},
+  {c:"0136",n:"Chogat",a:531.64},{c:"0137",n:"Bafola",a:149.26},{c:"0138",n:"Bhaiu",a:203.03},
+  {c:"0139",n:"Khanda Bhaga",a:184.15},{c:"0140",n:"Bagri",a:3157.73},{c:"0141",n:"Ramdevnagar",a:883.95},
+  {c:"0142",n:"Belpana",a:448},{c:"0143",n:"Kot Kirana",a:1533},{c:"0144",n:"Seerma",a:759},
+  {c:"8053",n:"Bar",a:1507.33}
+];
+
+const nameCount = {};
+villages.forEach(v => nameCount[v.n] = (nameCount[v.n]||0)+1);
+
+let userData = {};
+
+// ── Helper: is a village "filled" (has any data entered)
+function isFilled(code){
+  const d = userData[code]||{};
+  return !!(d.hamlet||d.hlb||d.pop||d.landmark||d.patwari);
+}
+
+// ── Update the Pending / Filled stat cards
+function updateStatCards(){
+  const filledVillages = villages.filter(v => isFilled(v.c));
+  const pendingVillages = villages.filter(v => !isFilled(v.c));
+  const fc = filledVillages.length;
+  const pc = pendingVillages.length;
+  const pct = Math.round((fc/villages.length)*100);
+
+  document.getElementById('filledCount').textContent = fc;
+  document.getElementById('pendingCount').textContent = pc;
+  document.getElementById('filledSub').textContent = `${pct}% completion · click to filter`;
+  document.getElementById('pendingSub').textContent = `${100-pct}% remaining · click to filter`;
+}
+
+// ── Filter mode: null | 'pending' | 'filled'
+let activeFilter = null;
+
+window.togglePendingFilter = function(){
+  if(activeFilter === 'pending'){
+    activeFilter = null;
+  } else {
+    activeFilter = 'pending';
+  }
+  applyFilter();
+}
+
+window.toggleFilledFilter = function(){
+  if(activeFilter === 'filled'){
+    activeFilter = null;
+  } else {
+    activeFilter = 'filled';
+  }
+  applyFilter();
+}
+
+function applyFilter(){
+  const searchQ = document.getElementById('searchBox').value.toLowerCase().trim();
+  let base = searchQ ? villages.filter(v => v.n.toLowerCase().includes(searchQ)||v.c.includes(searchQ)) : [...villages];
+
+  if(activeFilter === 'pending'){
+    filtered = base.filter(v => !isFilled(v.c));
+  } else if(activeFilter === 'filled'){
+    filtered = base.filter(v => isFilled(v.c));
+  } else {
+    filtered = base;
+  }
+
+  // Update button + card visual states
+  const pendBtn = document.getElementById('pendingFilterBtn');
+  const badge = document.getElementById('filterBadge');
+  const pendCard = document.getElementById('statPendingCard');
+  const filledCard = document.getElementById('statFilledCard');
+
+  pendCard.classList.remove('active-filter');
+  filledCard.classList.remove('active-filter');
+  pendBtn.classList.remove('active');
+  badge.classList.add('hidden');
+
+  if(activeFilter === 'pending'){
+    pendBtn.classList.add('active');
+    pendBtn.textContent = '✕ Clear Pending Filter';
+    badge.textContent = 'Showing Pending Only';
+    badge.classList.remove('hidden');
+    pendCard.classList.add('active-filter');
+  } else if(activeFilter === 'filled'){
+    pendBtn.textContent = '⏳ Pending Only';
+    badge.textContent = 'Showing Filled Only';
+    badge.classList.remove('hidden');
+    filledCard.classList.add('active-filter');
+  } else {
+    pendBtn.textContent = '⏳ Pending Only';
+  }
+
+  page = 1;
+  render();
+}
+
+async function loadFromFirestore(){
+  setLoading(true, 'Loading data from database…');
+  try {
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('REQUEST_TIMEOUT')), 8000)
+    );
+    const snapshot = await Promise.race([
+      getDocs(collection(db, 'villages')),
+      timeout
+    ]);
+    snapshot.forEach(docSnap => {
+      userData[docSnap.id] = docSnap.data();
+    });
+    setLoading(false);
+    updateStatCards();
+    render();
+  } catch(e){
+    setLoading(false);
+    let msg = '';
+    if(e.message === 'REQUEST_TIMEOUT'){
+      msg = '⏱️ <b>Database timed out.</b> Your Firestore rules are probably blocking reads.';
+    } else if(e.code === 'permission-denied'){
+      msg = '🔒 <b>Permission denied.</b> Firestore rules are blocking this request.';
+    } else {
+      msg = '❌ <b>Database error:</b> ' + (e.message || e.code || 'Unknown error');
+    }
+    document.getElementById('dbErrorBanner').innerHTML =
+      msg + '<br><span style="font-size:11px">👉 Go to <b>Firebase Console → Firestore → Rules</b> and set: <code style="background:#fee;padding:1px 5px;border-radius:3px">allow read, write: if true;</code> then save & publish.</span>';
+    document.getElementById('dbErrorBanner').style.display = 'block';
+    updateStatCards();
+    render();
+  }
+}
+
+window.saveRow = async function(code, btn){
+  if(!userData[code]) userData[code]={};
+
+  const row = document.getElementById('row-'+code);
+
+  // Collect current input values
+  if(row){
+    row.querySelectorAll('.inp').forEach(inp=>{
+      userData[code][inp.dataset.field] = inp.value.trim();
+    });
+  }
+
+  // ── VALIDATION: all 5 fields must be filled ──
+  const requiredFields = ['hamlet','hlb','pop','landmark','patwari'];
+  const missingFields = [];
+  if(row){
+    row.querySelectorAll('.inp').forEach(inp => inp.classList.remove('field-error'));
+    requiredFields.forEach(f => {
+      const val = userData[code][f];
+      if(!val || val === ''){
+        missingFields.push(f);
+        const inp = row.querySelector(`.inp[data-field="${f}"]`);
+        if(inp) inp.classList.add('field-error');
+      }
+    });
+  }
+  if(missingFields.length > 0){
+    // Show inline error message under save button
+    let errEl = row ? row.querySelector('.save-error-msg') : null;
+    if(errEl){
+      errEl.textContent = `⚠ Fill all ${missingFields.length} missing field${missingFields.length>1?'s':''}`;
+      errEl.style.display = 'block';
+      setTimeout(()=>{ errEl.style.display='none'; }, 3000);
+    }
+    // Remove error highlight after 2s
+    setTimeout(()=>{
+      if(row) row.querySelectorAll('.inp.field-error').forEach(inp=>inp.classList.remove('field-error'));
+    }, 2000);
+    return; // abort save
+  }
+  // ── END VALIDATION ──
+
+  userData[code]._saved = true;
+  userData[code]._ts = new Date().toISOString();
+
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+
+  try {
+    await setDoc(doc(db, 'villages', code), userData[code]);
+
+    if(row){
+      row.style.transition='background 0.3s';
+      row.style.background='rgba(0,201,141,0.12)';
+      setTimeout(()=>{ row.style.background=''; }, 1000);
+    }
+    updateStatCards();
+    // If pending filter is active, re-apply so saved row disappears from list
+    if(activeFilter) applyFilter(); else render();
+  } catch(e){
+    alert('❌ Could not save to database. Check your internet connection.');
+    if(btn){ btn.disabled=false; btn.textContent='💾 Save'; }
+  }
+}
+
+window.openModal = function(){ document.getElementById('modalOverlay').classList.add('open'); }
+window.closeModal = function(){ document.getElementById('modalOverlay').classList.remove('open'); }
+
+window.viewRow = function(code, name){
+  const d = userData[code] || {};
+  // Collect live values from inputs if row is currently rendered
+  const row = document.getElementById('row-'+code);
+  if(row){
+    row.querySelectorAll('.inp').forEach(inp=>{
+      if(inp.value.trim()) d[inp.dataset.field] = inp.value.trim();
+    });
+  }
+  const requiredFields = ['hamlet','hlb','pop','landmark','patwari'];
+  const filled = requiredFields.filter(f => d[f] && d[f] !== '');
+  const allFilled = filled.length === requiredFields.length;
+
+  // Store for download functions
+  window._vmCode = code;
+  window._vmName = name;
+
+  document.getElementById('vmTitle').textContent = '👁 ' + name;
+  document.getElementById('vmSub').textContent = code + ' · Raipur (002), Beawar (20), Rajasthan (09)';
+
+  const statusEl = document.getElementById('vmStatus');
+  if(allFilled){
+    statusEl.className = 'vm-status complete';
+    statusEl.textContent = '✅ All fields filled';
+  } else if(filled.length === 0){
+    statusEl.className = 'vm-status incomplete';
+    statusEl.textContent = '⏳ No data entered yet';
+  } else {
+    statusEl.className = 'vm-status incomplete';
+    statusEl.textContent = `⚠ ${filled.length} of 5 fields filled`;
+  }
+
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if(val){ el.textContent = val; el.className = 'vm-field-val'; }
+    else { el.textContent = 'Not entered'; el.className = 'vm-field-val empty'; }
+  };
+  set('vmHamlet',  d.hamlet   || '');
+  set('vmHlb',     d.hlb      || '');
+  set('vmPop',     d.pop      || '');
+  set('vmLandmark',d.landmark || '');
+  set('vmPatwari', d.patwari  || '');
+
+  document.getElementById('viewModalOverlay').classList.add('open');
+}
+window.closeViewModal = function(){ document.getElementById('viewModalOverlay').classList.remove('open'); }
+
+window.downloadRowCSV = function(){
+  const code = window._vmCode || '';
+  const name = window._vmName || '';
+  const d = userData[code] || {};
+  const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : '';
+  const status = d._saved ? 'Locked' : (d.hamlet||d.hlb||d.pop||d.landmark||d.patwari) ? 'Filled (Unsaved)' : 'Pending';
+  const headers = ['Village Name','Village Code','State','District','Sub-district','Hamlet Name','No. of HLB','Est. Population','Landmark','Name of Patwari','Entered On','Status'];
+  const values  = [name, code, 'Rajasthan (09)', 'Beawar (20)', 'Raipur (002)', d.hamlet||'', d.hlb||'', d.pop||'', d.landmark||'', d.patwari||'', ts, status];
+  const csv = [headers, values].map(r => r.map(x => `"${x}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `village-${code}-${name.replace(/\s+/g,'_')}.csv`;
+  a.click();
+}
+
+window.downloadRowTxt = function(){
+  const code = window._vmCode || '';
+  const name = window._vmName || '';
+  const d = userData[code] || {};
+  const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : 'Not saved yet';
+  const status = d._saved ? 'Locked' : (d.hamlet||d.hlb||d.pop||d.landmark||d.patwari) ? 'Filled (Unsaved)' : 'Pending';
+  const line = '─'.repeat(42);
+  const txt = [
+    'CENSUS OF INDIA 2027 — VILLAGE DATA RECORD',
+    line,
+    `Village Name   : ${name}`,
+    `Village Code   : ${code}`,
+    `State          : Rajasthan (09)`,
+    `District       : Beawar (20)`,
+    `Sub-district   : Raipur (002)`,
+    line,
+    `Hamlet Name    : ${d.hamlet   || 'Not entered'}`,
+    `No. of HLB     : ${d.hlb      || 'Not entered'}`,
+    `Est. Population: ${d.pop      || 'Not entered'}`,
+    `Landmark       : ${d.landmark || 'Not entered'}`,
+    `Patwari Name   : ${d.patwari  || 'Not entered'}`,
+    line,
+    `Status         : ${status}`,
+    `Entered On     : ${ts}`,
+    line,
+    'Design and Maintain by Vaibhav Vijay BCI',
+    'Census Management and Monitoring System (CMMS)',
+  ].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+  a.download = `village-${code}-${name.replace(/\s+/g,'_')}.txt`;
+  a.click();
+}
+
+window.unlockRow = function(code){
+  document.getElementById('unlockPwdInput').value = '';
+  document.getElementById('unlockError').style.display = 'none';
+  document.getElementById('unlockModalOverlay').dataset.code = code;
+  document.getElementById('unlockModalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('unlockPwdInput').focus(), 100);
+}
+
+window.closeUnlockModal = function(){
+  document.getElementById('unlockModalOverlay').classList.remove('open');
+}
+
+window.confirmUnlock = async function(){
+  const pwd = document.getElementById('unlockPwdInput').value;
+  const code = document.getElementById('unlockModalOverlay').dataset.code;
+  if(pwd === 'Paajiunlock'){
+    try {
+      await updateDoc(doc(db, 'villages', code), { _saved: deleteField() });
+      if(userData[code]) delete userData[code]._saved;
+    } catch(e){
+      if(userData[code]) delete userData[code]._saved;
+    }
+    closeUnlockModal();
+    updateStatCards();
+    render();
+  } else {
+    document.getElementById('unlockError').style.display = 'block';
+    document.getElementById('unlockPwdInput').value = '';
+    document.getElementById('unlockPwdInput').focus();
+  }
+}
+
+window.confirmPrint = function(){
+  const t=document.getElementById('savedToast');
+  t.style.display='inline-block';
+  setTimeout(()=>t.style.display='none', 2500);
+
+  const opt = document.querySelector('input[name="printOpt"]:checked').value;
+  document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+
+  closeModal();
+
+  if(opt === 'all'){
+    printRows([...villages]);
+  } else if(opt === 'filled'){
+    const filledVillages = villages.filter(v => isFilled(v.c));
+    if(!filledVillages.length){ alert('No rows have data entered yet.'); return; }
+    printRows(filledVillages);
+  } else if(opt === 'pending'){
+    const pendingVillages = villages.filter(v => !isFilled(v.c));
+    if(!pendingVillages.length){ alert('All villages are already filled!'); return; }
+    printRows(pendingVillages);
+  } else {
+    const start=(page-1)*perPage;
+    printRows(filtered.slice(start, Math.min(start+perPage, filtered.length)));
+  }
+}
+
+function printRows(rows){
+  const prevFiltered = filtered;
+  const prevPage = page;
+  const prevPerPage = perPage;
+
+  filtered = rows;
+  page = 1;
+  perPage = rows.length || 1;
+  render();
+
+  setTimeout(()=>{
+    window.print();
+    filtered = prevFiltered;
+    page = prevPage;
+    perPage = prevPerPage;
+    render();
+  }, 300);
+}
+
+let filtered = [...villages];
+let sortKey = null, sortAsc = true;
+let page = 1, perPage = 25;
+
+window.onSearch = function() {
+  const q = document.getElementById('searchBox').value.toLowerCase().trim();
+  let base = q ? villages.filter(v => v.n.toLowerCase().includes(q) || v.c.includes(q)) : [...villages];
+
+  if(activeFilter === 'pending'){
+    filtered = base.filter(v => !isFilled(v.c));
+  } else if(activeFilter === 'filled'){
+    filtered = base.filter(v => isFilled(v.c));
+  } else {
+    filtered = base;
+  }
+  page = 1;
+  render();
+}
+
+window.sortTable = function(key) {
+  if(sortKey===key) sortAsc=!sortAsc; else {sortKey=key; sortAsc=true;}
+  filtered.sort((a,b)=>{
+    let av,bv;
+    if(key==='area'){av=a.a;bv=b.a;}
+    else if(key==='villageCode'){av=a.c;bv=b.c;}
+    else if(key==='idx'){av=villages.indexOf(a);bv=villages.indexOf(b);}
+    else{av=a.n;bv=b.n;}
+    if(typeof av==='string') return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
+    return sortAsc?av-bv:bv-av;
+  });
+  page=1; render();
+}
+
+window.changePerPage = function(){
+  perPage=parseInt(document.getElementById('perPage').value)||145;
+  page=1; render();
+}
+
+function render(){
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  const total=filtered.length;
+  const totalPages=Math.ceil(total/perPage);
+  const start=(page-1)*perPage;
+  const end=Math.min(start+perPage,total);
+  const slice=filtered.slice(start,end);
+
+  document.getElementById('showFrom').textContent=total?start+1:0;
+  document.getElementById('showTo').textContent=end;
+  document.getElementById('totalCount').textContent=total;
+  document.getElementById('countBadge').textContent=total+' Records';
+
+  let footerNote = '';
+  if(activeFilter === 'pending') footerNote = `⏳ ${total} pending villages · Raipur (002), Beawar, Rajasthan`;
+  else if(activeFilter === 'filled') footerNote = `✅ ${total} filled villages · Raipur (002), Beawar, Rajasthan`;
+  else if(total===villages.length) footerNote = 'All 145 villages · Raipur (002), Beawar, Rajasthan';
+  else footerNote = `${total} of 145 villages matching filter`;
+  document.getElementById('footerNote').textContent = footerNote;
+
+  if(!slice.length){
+    tbody.innerHTML=`<tr><td colspan="16" class="no-results">${activeFilter==='pending'?'🎉 All villages have been filled in!':activeFilter==='filled'?'No filled villages yet.':'No villages found.'}</td></tr>`;
+    document.getElementById('pageBtns').innerHTML='';
+    return;
+  }
+
+  slice.forEach(v=>{
+    const gi=villages.indexOf(v)+1;
+    const dup=nameCount[v.n]>1;
+    const special=v.c==='8053';
+    const d=userData[v.c]||{};
+    const isLocked = !!d._saved;
+    const hasFill = isFilled(v.c);
+    const isPending = !hasFill;
+    const dis = isLocked ? 'disabled' : '';
+
+    let tsHtml = '<span class="ts-empty">—</span>';
+    if(d._ts){
+      const dt = new Date(d._ts);
+      const dateStr = dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const timeStr = dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+      tsHtml = `<span class="ts-date">${dateStr}</span><span class="ts-time">${timeStr}</span>`;
+    }
+
+    const tr=document.createElement('tr');
+    tr.id = 'row-'+v.c;
+    if(isLocked) tr.classList.add('locked');
+    if(isPending && activeFilter === 'pending') tr.classList.add('pending-row');
+
+    tr.innerHTML=`
+      <td class="idx">${gi}</td>
+      <td><span class="vname">${v.n}${dup?'<span class="dup-tag">DUP</span>':''}${isPending?'<span class="pending-tag">PENDING</span>':''}</span><span class="vcode-sub">${v.c}</span></td>
+      <td><span class="loc-badge ${special?'special-code':''}">${v.c}</span></td>
+      <td><span class="loc-text">Rajasthan <span class="loc-code">(09)</span></span></td>
+      <td><span class="loc-text">Beawar <span class="loc-code">(20)</span></span></td>
+      <td><span class="loc-text">Raipur <span class="loc-code">(002)</span></span></td>
+      <td class="area-val">${v.a.toLocaleString()}</td>
+      <td><input class="inp inp-hamlet ${d.hamlet?'filled':''}" data-code="${v.c}" data-field="hamlet" type="text" placeholder="Comma separated…" value="${d.hamlet||''}" ${dis}/></td>
+      <td><input class="inp inp-num ${d.hlb?'filled':''}" data-code="${v.c}" data-field="hlb" type="number" min="0" placeholder="0" value="${d.hlb||''}" ${dis}/></td>
+      <td><input class="inp inp-pop ${d.pop?'filled':''}" data-code="${v.c}" data-field="pop" type="number" min="0" placeholder="0" value="${d.pop||''}" ${dis}/></td>
+      <td><input class="inp inp-landmark ${d.landmark?'filled':''}" data-code="${v.c}" data-field="landmark" type="text" placeholder="e.g. Near Temple…" value="${d.landmark||''}" ${dis}/></td>
+      <td><input class="inp inp-patwari ${d.patwari?'filled':''}" data-code="${v.c}" data-field="patwari" type="text" placeholder="Patwari name…" value="${d.patwari||''}" ${dis}/></td>
+      <td class="ts-cell">${tsHtml}</td>
+      <td class="save-td">
+        ${isLocked
+          ? `<span class="lock-badge">🔒 Locked</span>`
+          : `<button class="row-save-btn" data-code="${v.c}" onclick="saveRow('${v.c}', this)">💾 Save</button>
+             <div class="save-error-msg"></div>`
+        }
+      </td>
+      <td class="view-td">
+        <button class="row-view-btn" onclick="viewRow('${v.c}', '${v.n.replace(/'/g,"\\'")}')">👁 View</button>
+      </td>
+      <td class="unlock-td">
+        ${isLocked
+          ? `<button class="unlock-btn" onclick="unlockRow('${v.c}')">🔓 Unlock</button>`
+          : `<span class="unlock-na">—</span>`
+        }
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.inp:not([disabled])').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const code=inp.dataset.code, field=inp.dataset.field;
+      if(!userData[code]) userData[code]={};
+      userData[code][field]=inp.value.trim();
+      inp.classList.toggle('filled', !!inp.value.trim());
+      updateStatCards();
+    });
+  });
+
+  // Pagination
+  const pb=document.getElementById('pageBtns');
+  pb.innerHTML='';
+  const mk=(label,p,disabled,active)=>{
+    const b=document.createElement('button');
+    b.className='page-btn'+(active?' active':'');
+    b.textContent=label; b.disabled=!!disabled;
+    b.onclick=()=>{page=p;render();};
+    return b;
+  };
+  pb.appendChild(mk('←',page-1,page<=1));
+  let pages=[];
+  if(totalPages<=7){for(let i=1;i<=totalPages;i++)pages.push(i);}
+  else{
+    pages=[1];
+    if(page>3)pages.push('…');
+    for(let i=Math.max(2,page-1);i<=Math.min(totalPages-1,page+1);i++)pages.push(i);
+    if(page<totalPages-2)pages.push('…');
+    pages.push(totalPages);
+  }
+  pages.forEach(p=>{
+    if(p==='…'){const s=document.createElement('span');s.textContent='…';s.style.cssText='color:var(--muted);font-size:12px;padding:0 3px';pb.appendChild(s);}
+    else pb.appendChild(mk(p,p,false,p===page));
+  });
+  pb.appendChild(mk('→',page+1,page>=totalPages));
+}
+
+window.exportCSV = function(){
+  const h=['#','Village Name','Village Code','State','District','Sub-district','Area (ha)','Hamlet Name','No. of HLB','Est. Population (Patwari)','Landmark','Name of Patwari','Entered On','Status'];
+  const rows=villages.map((v,i)=>{
+    const d=userData[v.c]||{};
+    const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : '';
+    const status = d._saved ? 'Locked' : isFilled(v.c) ? 'Filled (Unsaved)' : 'Pending';
+    return [i+1,v.n,v.c,'Rajasthan (09)','Beawar (20)','Raipur (002)',v.a,d.hamlet||'',d.hlb||'',d.pop||'',d.landmark||'',d.patwari||'',ts,status];
+  });
+  const csv=[h,...rows].map(r=>r.map(x=>`"${x}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='village-list-raipur-002-all145.csv';
+  a.click();
+}
+
+loadFromFirestore();
+</script>
+</body>
+</html>
