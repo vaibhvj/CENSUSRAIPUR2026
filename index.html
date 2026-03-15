@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Village List — Raipur (002) · CMMS</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --navy: #ffffff;
@@ -352,13 +353,38 @@
     background: #ffffff;
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 28px 32px;
     width: 480px;
     max-width: 95vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    overflow: hidden;
+  }
+  .vm-header {
+    padding: 24px 28px 0 28px;
+    flex-shrink: 0;
+  }
+  .vm-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 0 28px 20px 28px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .vm-body::-webkit-scrollbar { width: 6px; }
+  .vm-body::-webkit-scrollbar-track { background: #f0f2f5; border-radius: 3px; }
+  .vm-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .vm-body::-webkit-scrollbar-thumb:hover { background: #b0bece; }
+  .vm-footer {
+    padding: 14px 28px 20px 28px;
+    border-top: 1px solid var(--border);
+    background: #f8f9fc;
+    flex-shrink: 0;
+    border-radius: 0 0 12px 12px;
   }
   .view-modal h3 { font-size: 15px; font-weight: 600; color: var(--teal); margin-bottom: 4px; }
-  .view-modal .vm-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; font-family: 'IBM Plex Mono', monospace; }
+  .view-modal .vm-sub { font-size: 11px; color: var(--muted); margin-bottom: 14px; font-family: 'IBM Plex Mono', monospace; }
   .vm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
   .vm-field { background: #f4f6fa; border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; }
   .vm-field-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
@@ -570,42 +596,58 @@
 <!-- VIEW DATA MODAL -->
 <div class="modal-overlay" id="viewModalOverlay" onclick="if(event.target===this)closeViewModal()">
   <div class="view-modal">
-    <h3 id="vmTitle">👁 Village Data</h3>
-    <div class="vm-sub" id="vmSub">Code · Sub-district</div>
-    <div id="vmStatus" class="vm-status complete"></div>
-    <div class="vm-grid">
-      <div class="vm-field hamlet-f">
-        <div class="vm-field-label">🏘 Hamlet Names</div>
-        <div class="vm-field-val" id="vmHamlet">—</div>
-      </div>
-      <div class="vm-field">
-        <div class="vm-field-label">🏠 No. of HLB</div>
-        <div class="vm-field-val" id="vmHlb">—</div>
-      </div>
-      <div class="vm-field">
-        <div class="vm-field-label">👥 Est. Population</div>
-        <div class="vm-field-val" id="vmPop">—</div>
-      </div>
-      <div class="vm-field">
-        <div class="vm-field-label">📍 Landmark</div>
-        <div class="vm-field-val" id="vmLandmark">—</div>
-      </div>
-      <div class="vm-field">
-        <div class="vm-field-label">👤 Patwari Name</div>
-        <div class="vm-field-val" id="vmPatwari">—</div>
+
+    <!-- Fixed Header -->
+    <div class="vm-header">
+      <h3 id="vmTitle">👁 Village Data</h3>
+      <div class="vm-sub" id="vmSub">Code · Sub-district</div>
+      <div id="vmStatus" class="vm-status complete"></div>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="vm-body">
+      <div class="vm-grid">
+        <div class="vm-field hamlet-f">
+          <div class="vm-field-label">🏘 Hamlet Names</div>
+          <div class="vm-field-val" id="vmHamlet">—</div>
+        </div>
+        <div class="vm-field">
+          <div class="vm-field-label">🏠 No. of HLB</div>
+          <div class="vm-field-val" id="vmHlb">—</div>
+        </div>
+        <div class="vm-field">
+          <div class="vm-field-label">👥 Est. Population</div>
+          <div class="vm-field-val" id="vmPop">—</div>
+        </div>
+        <div class="vm-field">
+          <div class="vm-field-label">📍 Landmark</div>
+          <div class="vm-field-val" id="vmLandmark">—</div>
+        </div>
+        <div class="vm-field">
+          <div class="vm-field-label">👤 Patwari Name</div>
+          <div class="vm-field-val" id="vmPatwari">—</div>
+        </div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div style="display:flex;gap:8px;">
-        <button onclick="downloadRowCSV()" style="display:flex;align-items:center;gap:6px;background:rgba(0,122,122,0.08);border:1px solid rgba(0,122,122,0.35);border-radius:7px;padding:8px 14px;color:#007a7a;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(0,122,122,0.18)'" onmouseout="this.style.background='rgba(0,122,122,0.08)'">
-          ⬇ Download CSV
-        </button>
-        <button onclick="downloadRowTxt()" style="display:flex;align-items:center;gap:6px;background:rgba(26,111,191,0.08);border:1px solid rgba(26,111,191,0.3);border-radius:7px;padding:8px 14px;color:#1a6fbf;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(26,111,191,0.18)'" onmouseout="this.style.background='rgba(26,111,191,0.08)'">
-          📄 Download TXT
-        </button>
+
+    <!-- Fixed Footer with buttons -->
+    <div class="vm-footer">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="downloadRowCSV()" style="display:flex;align-items:center;gap:6px;background:rgba(0,122,122,0.08);border:1px solid rgba(0,122,122,0.35);border-radius:7px;padding:8px 14px;color:#007a7a;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(0,122,122,0.18)'" onmouseout="this.style.background='rgba(0,122,122,0.08)'">
+            ⬇ CSV
+          </button>
+          <button onclick="downloadRowPDF()" style="display:flex;align-items:center;gap:6px;background:rgba(26,111,191,0.08);border:1px solid rgba(26,111,191,0.3);border-radius:7px;padding:8px 14px;color:#1a6fbf;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(26,111,191,0.18)'" onmouseout="this.style.background='rgba(26,111,191,0.08)'">
+            📄 PDF
+          </button>
+          <button onclick="downloadRowTxt()" style="display:flex;align-items:center;gap:6px;background:rgba(192,75,14,0.08);border:1px solid rgba(192,75,14,0.3);border-radius:7px;padding:8px 14px;color:#c04b0e;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(192,75,14,0.18)'" onmouseout="this.style.background='rgba(192,75,14,0.08)'">
+            📝 TXT
+          </button>
+        </div>
+        <button class="modal-cancel" onclick="closeViewModal()">Close</button>
       </div>
-      <button class="modal-cancel" onclick="closeViewModal()">Close</button>
     </div>
+
   </div>
 </div>
 
@@ -1046,21 +1088,26 @@ window.openModal = function(){ document.getElementById('modalOverlay').classList
 window.closeModal = function(){ document.getElementById('modalOverlay').classList.remove('open'); }
 
 window.viewRow = function(code, name){
-  const d = userData[code] || {};
+  const d = Object.assign({}, userData[code] || {});
   // Collect live values from inputs if row is currently rendered
   const row = document.getElementById('row-'+code);
   if(row){
     row.querySelectorAll('.inp').forEach(inp=>{
-      if(inp.value.trim()) d[inp.dataset.field] = inp.value.trim();
+      const v = inp.value.trim();
+      if(v) d[inp.dataset.field] = v;
     });
   }
   const requiredFields = ['hamlet','hlb','pop','landmark','patwari'];
   const filled = requiredFields.filter(f => d[f] && d[f] !== '');
   const allFilled = filled.length === requiredFields.length;
 
-  // Store for download functions
-  window._vmCode = code;
-  window._vmName = name;
+  // Store full snapshot for download functions
+  window._vmCode   = code;
+  window._vmName   = name;
+  window._vmData   = d;   // ← complete data including live unsaved inputs
+  const _vObj = villages.find(v => v.c === code);
+  window._vmArea   = _vObj ? _vObj.a.toLocaleString() + ' ha' : '—';
+  window._vmSerial = _vObj ? (villages.indexOf(_vObj) + 1) : '—';
 
   document.getElementById('vmTitle').textContent = '👁 ' + name;
   document.getElementById('vmSub').textContent = code + ' · Raipur (002), Beawar (20), Rajasthan (09)';
@@ -1093,13 +1140,15 @@ window.viewRow = function(code, name){
 window.closeViewModal = function(){ document.getElementById('viewModalOverlay').classList.remove('open'); }
 
 window.downloadRowCSV = function(){
-  const code = window._vmCode || '';
-  const name = window._vmName || '';
-  const d = userData[code] || {};
-  const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : '';
+  const code   = window._vmCode   || '';
+  const name   = window._vmName   || '';
+  const d      = window._vmData   || {};
+  const area   = window._vmArea   || '—';
+  const serial = window._vmSerial || '—';
+  const ts     = d._ts ? new Date(d._ts).toLocaleString('en-IN') : '';
   const status = d._saved ? 'Locked' : (d.hamlet||d.hlb||d.pop||d.landmark||d.patwari) ? 'Filled (Unsaved)' : 'Pending';
-  const headers = ['Village Name','Village Code','State','District','Sub-district','Hamlet Name','No. of HLB','Est. Population','Landmark','Name of Patwari','Entered On','Status'];
-  const values  = [name, code, 'Rajasthan (09)', 'Beawar (20)', 'Raipur (002)', d.hamlet||'', d.hlb||'', d.pop||'', d.landmark||'', d.patwari||'', ts, status];
+  const headers = ['Sr No','Village Name','Village Code','State','State Code','District','District Code','Sub-district','Sub-dist Code','Area (ha)','Hamlet Name','No. of HLB','Est. Population (Patwari)','Landmark','Name of Patwari','Entered On','Status'];
+  const values  = [serial, name, code, 'Rajasthan', '09', 'Beawar', '20', 'Raipur', '002', area, d.hamlet||'', d.hlb||'', d.pop||'', d.landmark||'', d.patwari||'', ts, status];
   const csv = [headers, values].map(r => r.map(x => `"${x}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -1108,37 +1157,292 @@ window.downloadRowCSV = function(){
 }
 
 window.downloadRowTxt = function(){
-  const code = window._vmCode || '';
-  const name = window._vmName || '';
-  const d = userData[code] || {};
-  const ts = d._ts ? new Date(d._ts).toLocaleString('en-IN') : 'Not saved yet';
-  const status = d._saved ? 'Locked' : (d.hamlet||d.hlb||d.pop||d.landmark||d.patwari) ? 'Filled (Unsaved)' : 'Pending';
-  const line = '─'.repeat(42);
+  const code   = window._vmCode   || '';
+  const name   = window._vmName   || '';
+  const d      = window._vmData   || {};
+  const area   = window._vmArea   || '—';
+  const serial = window._vmSerial || '—';
+  const ts     = d._ts ? new Date(d._ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : 'Not saved yet';
+  const status = d._saved ? 'Locked / Saved' : (d.hamlet||d.hlb||d.pop||d.landmark||d.patwari) ? 'Filled (Unsaved)' : 'Pending';
+  const line = '═'.repeat(48);
+  const dash = '─'.repeat(48);
   const txt = [
     'CENSUS OF INDIA 2027 — VILLAGE DATA RECORD',
+    'Census Management and Monitoring System (CMMS)',
     line,
+    `Sr. No.        : ${serial}`,
     `Village Name   : ${name}`,
     `Village Code   : ${code}`,
-    `State          : Rajasthan (09)`,
-    `District       : Beawar (20)`,
-    `Sub-district   : Raipur (002)`,
-    line,
-    `Hamlet Name    : ${d.hamlet   || 'Not entered'}`,
+    `Area           : ${area}`,
+    dash,
+    'LOCATION',
+    `State          : Rajasthan            Code: 09`,
+    `District       : Beawar               Code: 20`,
+    `Sub-district   : Raipur               Code: 002`,
+    dash,
+    'ENTERED DATA',
+    `Hamlet Name(s) : ${d.hamlet   || 'Not entered'}`,
     `No. of HLB     : ${d.hlb      || 'Not entered'}`,
     `Est. Population: ${d.pop      || 'Not entered'}`,
     `Landmark       : ${d.landmark || 'Not entered'}`,
     `Patwari Name   : ${d.patwari  || 'Not entered'}`,
-    line,
+    dash,
     `Status         : ${status}`,
-    `Entered On     : ${ts}`,
+    `Data Entered On: ${ts}`,
+    `Enumerator     : NARENDRA BAPERIA (chv_0920002)`,
+    `PDF Generated  : ${new Date().toLocaleString('en-IN')}`,
     line,
     'Design and Maintain by Vaibhav Vijay BCI',
-    'Census Management and Monitoring System (CMMS)',
+    'Census of India 2027 · CMMS · Raipur (002), Beawar (20), Rajasthan (09)',
   ].join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
   a.download = `village-${code}-${name.replace(/\s+/g,'_')}.txt`;
   a.click();
+}
+
+window.downloadRowPDF = function(){
+  const code = window._vmCode || '';
+  const name = window._vmName || '';
+  const d    = window._vmData || {};
+
+  const ts     = d._ts ? new Date(d._ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : 'Not saved yet';
+  const genOn  = new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+  const status = d._saved ? 'Locked / Saved' : (d.hamlet||d.hlb||d.pop||d.landmark||d.patwari) ? 'Filled (Unsaved)' : 'Pending';
+
+  // Use pre-stored area and serial from viewRow
+  const area   = window._vmArea   || '—';
+  const serial = window._vmSerial || '—';
+
+  const allFilled = ['hamlet','hlb','pop','landmark','patwari'].every(f => d[f] && d[f] !== '');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, pad = 14;
+
+  // ── TOP HEADER BAR ──
+  doc.setFillColor(26, 42, 58);
+  doc.rect(0, 0, W, 32, 'F');
+
+  // Emblem circle
+  doc.setFillColor(201, 125, 0);
+  doc.circle(pad + 6, 16, 6, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(9);
+  doc.setFont('helvetica','bold');
+  doc.text('IN', pad + 6, 17.5, {align:'center'});
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CENSUS OF INDIA 2027', pad + 16, 12);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 200, 220);
+  doc.text('Census Management and Monitoring System (CMMS)  ·  Village Data Record', pad + 16, 19);
+  doc.text('Office of the Registrar General & Census Commissioner, Ministry of Home Affairs, GoI', pad + 16, 25);
+
+  // Right-side serial
+  doc.setTextColor(201, 125, 0);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SR. NO.', W - pad - 18, 11);
+  doc.setFontSize(18);
+  doc.text(String(serial), W - pad - 18, 24);
+
+  // Gold accent line
+  doc.setFillColor(201, 125, 0);
+  doc.rect(0, 32, W, 1.5, 'F');
+
+  let y = 40;
+
+  // ── VILLAGE NAME BLOCK ──
+  doc.setFillColor(244, 246, 250);
+  doc.setDrawColor(208, 219, 232);
+  doc.roundedRect(pad, y, W - pad*2, 22, 3, 3, 'FD');
+
+  doc.setTextColor(90, 110, 133);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('VILLAGE / TOWN NAME', pad + 5, y + 6);
+
+  doc.setTextColor(26, 42, 58);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text(name, pad + 5, y + 15);
+
+  doc.setTextColor(0, 122, 122);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Village Code: ' + code, W - pad - 5, y + 10, { align: 'right' });
+  doc.text('Area: ' + area, W - pad - 5, y + 16, { align: 'right' });
+
+  y += 28;
+
+  // ── STATUS BADGE ──
+  if(allFilled){ doc.setFillColor(0, 153, 101); }
+  else { doc.setFillColor(176, 48, 96); }
+  doc.roundedRect(pad, y, 55, 8, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(allFilled ? '✓  All Fields Filled' : '⚠  Incomplete Data', pad + 4, y + 5.5);
+
+  // Status text right
+  doc.setTextColor(90,110,133);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica','normal');
+  doc.text('Status: ', W - pad - 5, y + 5.5, {align:'right'});
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(26,42,58);
+  const statusW = doc.getTextWidth('Status: ');
+  doc.text(status, W - pad - 5, y + 5.5, {align:'right'});
+
+  y += 14;
+
+  // ── SECTION LABEL: LOCATION DETAILS ──
+  doc.setFillColor(26, 42, 58);
+  doc.rect(pad, y, W - pad*2, 7, 'F');
+  doc.setTextColor(201, 125, 0);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('LOCATION DETAILS', pad + 4, y + 5);
+
+  y += 10;
+
+  // Location fields grid (3 columns)
+  const locFields = [
+    { label: 'State',        val: 'Rajasthan' },
+    { label: 'State Code',   val: '09' },
+    { label: 'District',     val: 'Beawar' },
+    { label: 'District Code',val: '20' },
+    { label: 'Sub-district', val: 'Raipur' },
+    { label: 'Sub-dist Code',val: '002' },
+  ];
+
+  const colW = (W - pad*2) / 3;
+  locFields.forEach((f, i) => {
+    const col = i % 3;
+    const xPos = pad + col * colW;
+    if(i > 0 && i % 3 === 0) y += 16;
+
+    doc.setFillColor(248, 249, 252);
+    doc.setDrawColor(218, 225, 235);
+    doc.roundedRect(xPos, y, colW - 2, 14, 2, 2, 'FD');
+
+    doc.setTextColor(90,110,133);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica','bold');
+    doc.text(f.label.toUpperCase(), xPos + 3, y + 5);
+
+    doc.setTextColor(26,42,58);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text(f.val, xPos + 3, y + 11.5);
+  });
+
+  y += 22;
+
+  // ── SECTION LABEL: ENTERED DATA ──
+  doc.setFillColor(0, 122, 122);
+  doc.rect(pad, y, W - pad*2, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ENTERED DATA', pad + 4, y + 5);
+
+  y += 10;
+
+  // ── DATA FIELDS ──
+  const dataFields = [
+    { label: 'Hamlet Name(s)',             val: d.hamlet,   full: true  },
+    { label: 'No. of HLB (Houselist Blocks)', val: d.hlb,  full: false },
+    { label: 'Est. Population (by Patwari)', val: d.pop,   full: false },
+    { label: 'Landmark / Nearby Place',    val: d.landmark, full: false },
+    { label: 'Name of Patwari',            val: d.patwari,  full: false },
+  ];
+
+  const halfW = (W - pad*2 - 3) / 2;
+
+  dataFields.forEach((f, i) => {
+    const boxW = f.full ? (W - pad*2) : halfW;
+    const xPos = f.full ? pad : (i % 2 === 0 ? pad : pad + halfW + 3);
+
+    if(!f.full && i % 2 === 0 && i > 0) y += 20;
+
+    const val = f.val || '';
+    const lines = doc.splitTextToSize(val || 'Not entered', boxW - 8);
+    const boxH = Math.max(18, lines.length * 5 + 10);
+
+    doc.setFillColor(val ? 248 : 252, val ? 249 : 248, val ? 252 : 250);
+    doc.setDrawColor(val ? 0 : 208, val ? 191 : 219, val ? 191 : 232);
+    doc.setLineWidth(val ? 0.6 : 0.3);
+    doc.roundedRect(xPos, y, boxW, boxH, 2, 2, 'FD');
+
+    doc.setTextColor(90,110,133);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica','bold');
+    doc.text(f.label.toUpperCase(), xPos + 4, y + 5.5);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', val ? 'bold' : 'italic');
+    doc.setTextColor(val ? 26 : 160, val ? 42 : 160, val ? 58 : 170);
+    lines.forEach((line, li) => {
+      doc.text(line, xPos + 4, y + 12 + li * 5);
+    });
+
+    if(f.full) y += boxH + 3;
+  });
+
+  y += 23;
+
+  // ── META / TIMESTAMP ROW ──
+  doc.setFillColor(238, 241, 248);
+  doc.setDrawColor(208, 219, 232);
+  doc.roundedRect(pad, y, W - pad*2, 18, 2, 2, 'FD');
+
+  doc.setTextColor(90,110,133);
+  doc.setFontSize(7);
+  doc.setFont('helvetica','normal');
+  doc.text('Data Entered On:', pad + 4, y + 7);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(26,42,58);
+  doc.text(ts, pad + 36, y + 7);
+
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(90,110,133);
+  doc.text('Enumerator:', pad + 4, y + 14);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(26,42,58);
+  doc.text('NARENDRA BAPERIA  (chv_0920002)', pad + 24, y + 14);
+
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(90,110,133);
+  doc.text('PDF Generated:', W - pad - 5, y + 7, {align:'right'});
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(26,42,58);
+  // shift left by label width
+  const genLabel = 'PDF Generated:  ';
+  doc.text(genOn, W - pad - 5, y + 14, {align:'right'});
+
+  y += 24;
+
+  // ── FOOTER ──
+  const footerY = 282;
+  doc.setFillColor(244, 246, 250);
+  doc.rect(0, footerY, W, 15, 'F');
+  doc.setDrawColor(208, 219, 232);
+  doc.line(0, footerY, W, footerY);
+  doc.setFillColor(201, 125, 0);
+  doc.rect(0, footerY, 2, 15, 'F');
+  doc.setFontSize(7);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(90,110,133);
+  doc.text('Design and Maintain by Vaibhav Vijay BCI', W/2, footerY + 6, { align: 'center' });
+  doc.setFont('helvetica','normal');
+  doc.text('Census Management and Monitoring System (CMMS)  |  Census of India 2027  |  Raipur (002), Beawar (20), Rajasthan (09)', W/2, footerY + 11, { align: 'center' });
+
+  doc.save(`village-${code}-${name.replace(/\s+/g,'_')}.pdf`);
 }
 
 window.unlockRow = function(code){
