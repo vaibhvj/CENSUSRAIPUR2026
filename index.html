@@ -114,6 +114,15 @@ window.fbSaveCard = async function(idx) {
         : `☁️ HLB ${d.hlbNo} — Firestore में सेव हो गया!`,
       'success'
     );
+
+    // ━━━ Update DOM to reflect saved data immediately ━━━
+    const now = new Date().toLocaleString('hi-IN');
+    d.savedAt   = new Date().toISOString();
+    d.savedDate = now;
+
+    // Show/refresh the saved-data summary panel inside the card
+    window.renderSavedSummary(idx, d, kmlFileName, kmlPublicUrl, now);
+
   } catch(err) {
     console.error('Cloud save error:', err);
     setSyncBadge(idx, 'error');
@@ -138,12 +147,22 @@ window.fbLoadAll = async function() {
         entry.landmark      = saved.landmark      || '';
         entry.kmlFileName   = saved.kmlFileName   || '';
         entry.kmlPublicUrl  = saved.kmlPublicUrl  || '';
+        entry.savedAt       = saved.savedAt       || '';
+        entry.savedDate     = saved.savedDate     || '';
         loaded++;
       }
     });
     if(bar) bar.style.display = 'none';
     window.renderCards();
     window.updateStats();
+    // After rendering, inject saved summaries for all loaded entries
+    snap.forEach(docSnap => {
+      const saved = docSnap.data();
+      const idx   = window._state.data.findIndex(d => d.hlbNo === saved.hlbNo);
+      if(idx !== -1 && (saved.landmark || saved.hlbDescChange || saved.kmlFileName)) {
+        window.renderSavedSummary(idx, saved, saved.kmlFileName||'', saved.kmlPublicUrl||'', saved.savedDate||'');
+      }
+    });
     if(loaded > 0)
       window.showToast(`☁️ ${loaded} records Firestore से load हुए!`, 'success');
   } catch(err) {
@@ -321,6 +340,52 @@ input.is-error,textarea.is-error{border-color:var(--red-err)!important;}
   position:absolute;left:0;
   color:var(--saffron);font-size:.8rem;top:1px;
 }
+/* ━━━ Saved Data Summary Panel ━━━ */
+.saved-summary{
+  margin-top:18px;
+  background:linear-gradient(135deg,#e8fff7,#f0fff9);
+  border:1.5px solid var(--mint);
+  border-radius:10px;
+  overflow:hidden;
+  animation:summaryFadeIn .35s ease;
+}
+@keyframes summaryFadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.saved-summary-header{
+  background:linear-gradient(90deg,#00b07e,var(--mint));
+  padding:10px 16px;
+  display:flex;align-items:center;gap:10px;
+  justify-content:space-between;
+}
+.saved-summary-header .ss-title{
+  font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;color:#fff;
+  display:flex;align-items:center;gap:8px;
+}
+.saved-summary-header .ss-date{
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(255,255,255,.85);
+  background:rgba(0,0,0,.15);padding:3px 10px;border-radius:20px;
+}
+.ss-body{padding:16px 18px;}
+.ss-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 20px;}
+.ss-field{display:flex;flex-direction:column;gap:3px;}
+.ss-field .sf-label{font-size:.67rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-family:'Rajdhani',sans-serif;}
+.ss-field .sf-value{font-size:.85rem;color:var(--text-main);font-family:'Noto Sans Devanagari',sans-serif;line-height:1.45;word-break:break-word;}
+.ss-field .sf-value.empty{color:#b0b8cc;font-style:italic;font-size:.8rem;}
+.ss-field .sf-value.highlight{color:var(--saffron);font-weight:600;}
+.ss-field .sf-value.kml-val{color:var(--mint);font-family:'IBM Plex Mono',monospace;font-size:.75rem;font-weight:600;}
+.ss-print-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#c0392b,#e74c3c);
+  color:#fff;border:none;border-radius:8px;
+  padding:9px 20px;font-family:'Noto Sans Devanagari',sans-serif;
+  font-size:.85rem;font-weight:700;cursor:pointer;
+  box-shadow:0 3px 10px rgba(231,76,60,.3);
+  transition:transform .15s,box-shadow .15s;
+}
+.ss-print-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(231,76,60,.4);}
+.ss-print-btn:active{transform:translateY(0);}
+.ss-footer{padding:10px 18px 14px;border-top:1px solid #c5f0e4;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.ss-footer-note{font-size:.7rem;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
+
 .btn-excel:hover{filter:brightness(1.12);}
 .btn-save-card{background:var(--navy);color:#FFF;box-shadow:var(--shadow-sm);padding:8px 16px;font-size:.82rem;}
 .btn-save-card:hover{background:var(--navy-lt);}
@@ -969,58 +1034,183 @@ function downloadCardPDF(idx) {
   const dce  = document.getElementById(`desc-change-${idx}`);
   if(lmEl) d.landmark = lmEl.value;
   if(dce)  d.hlbDescChange = dce.value;
-  const chg = state.changeCounts[idx]||0;
-  const kmlName = state.kmlFiles[idx]?state.kmlFiles[idx].name:'Not uploaded';
-  const now = new Date().toLocaleString('hi-IN');
+  const chg     = state.changeCounts[idx]||0;
+  const kmlName = d.kmlFileName || (state.kmlFiles[idx]?state.kmlFiles[idx].name:'') || 'अपलोड नहीं हुई';
+  const kmlUrl  = d.kmlPublicUrl || '';
+  const savedOn = d.savedDate || new Date().toLocaleString('hi-IN');
+  const now     = new Date().toLocaleString('hi-IN');
   const html = `<!DOCTYPE html>
-<html>
+<html lang="hi">
 <head><meta charset="UTF-8"/>
-<title>HLB ${d.hlbNo} - ${d.village}</title>
+<title>HLB ${d.hlbNo} — ${d.vernacularName}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Rajdhani:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-  body{font-family:Arial,sans-serif;margin:32px;color:#1a1a2e;font-size:13px;}
-  h1{color:#0D2B55;font-size:18px;margin-bottom:4px;}
-  .sub{color:#5C6B8A;font-size:11px;margin-bottom:24px;}
-  table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-  th{background:#0D2B55;color:#fff;text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;}
-  td{padding:9px 12px;border-bottom:1px solid #DDE3EF;vertical-align:top;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans Devanagari',Arial,sans-serif;background:#fff;color:#1a1a2e;font-size:13px;padding:32px 36px;}
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #0D2B55;}
+  .org-block .org-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#0D2B55;}
+  .org-block .org-sub{font-size:10.5px;color:#5C6B8A;letter-spacing:.3px;margin-top:2px;}
+  .emblem{width:56px;height:56px;background:linear-gradient(135deg,#D4A017,#e8a800);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+  .doc-tag{background:#0D2B55;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 12px;border-radius:4px;letter-spacing:.5px;margin-top:4px;display:inline-block;}
+  .section-title{background:linear-gradient(90deg,#0D2B55,#1A3F7A);color:#fff;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;padding:7px 14px;border-radius:5px;letter-spacing:.4px;text-transform:uppercase;margin:18px 0 10px;}
+  table{width:100%;border-collapse:collapse;margin-bottom:6px;}
   tr:nth-child(even) td{background:#f8fafd;}
-  .label{font-weight:700;color:#0D2B55;width:200px;}
-  .badge{background:#FF6B00;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;}
-  .footer{margin-top:32px;padding-top:12px;border-top:2px solid #DDE3EF;font-size:10px;color:#5C6B8A;display:flex;justify-content:space-between;}
-  .change-box{background:#FFF0E6;border:1px solid #FFDBB0;border-radius:6px;padding:10px 14px;font-size:12px;color:#FF6B00;}
+  td{padding:8px 12px;border:1px solid #DDE3EF;vertical-align:top;font-size:12.5px;}
+  .lbl{font-family:'Rajdhani',sans-serif;font-weight:700;color:#0D2B55;width:210px;font-size:11.5px;letter-spacing:.2px;}
+  .val{color:#1a1a2e;}
+  .hlb-badge{background:#0D2B55;color:#fff;font-family:'Rajdhani',sans-serif;padding:3px 12px;border-radius:5px;font-weight:700;font-size:13px;}
+  .sr-badge{background:#FF6B00;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;}
+  .change-box{background:#FFF0E6;border:1.5px solid #FFDBB0;border-radius:6px;padding:10px 14px;font-size:12px;color:#FF6B00;margin:8px 0;}
+  .change-box strong{color:#cc4a00;}
+  .kml-box{background:#e0fff6;border:1.5px solid #00C48C;border-radius:6px;padding:10px 14px;font-size:12px;color:#00875f;margin:8px 0;display:flex;align-items:center;gap:8px;}
+  .kml-box a{color:#007a55;font-family:'IBM Plex Mono',monospace;font-size:11px;word-break:break-all;}
+  .status-complete{color:#00875f;font-weight:700;}
+  .status-pending{color:#FF6B00;font-weight:700;}
+  .footer{margin-top:32px;padding-top:12px;border-top:2px solid #DDE3EF;display:flex;justify-content:space-between;align-items:flex-end;}
+  .footer-left{font-size:10px;color:#5C6B8A;line-height:1.7;}
+  .footer-right{font-size:10px;color:#5C6B8A;text-align:right;line-height:1.7;}
+  .watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-family:'Rajdhani',sans-serif;font-size:90px;font-weight:700;color:rgba(13,43,85,.04);pointer-events:none;white-space:nowrap;z-index:-1;}
+  @media print{body{padding:18px 24px;}@page{size:A4;margin:1cm;}}
 </style>
 </head>
 <body>
-<h1>🏛️ Census Department — HLB Record</h1>
-<div class="sub">Raipur Tehsil (002) · Bewar · Rajasthan | Printed: ${now}</div>
+<div class="watermark">CENSUS 2027</div>
+
+<div class="page-header">
+  <div class="org-block">
+    <div class="org-title">🏛️ Census Department — Raipur</div>
+    <div class="org-sub">जनगणना विभाग · रायपुर तहसील (002) · ब्यावर · राजस्थान</div>
+    <span class="doc-tag">HLB RECORD — OFFICIAL COPY</span>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5C6B8A;">Printed: ${now}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5C6B8A;">Last Saved: ${savedOn||'—'}</div>
+    <div style="margin-top:6px;">
+      <span class="sr-badge">SR #${d.srNo}</span>&nbsp;
+      <span class="hlb-badge">HLB ${d.hlbNo}</span>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">📍 HLB पहचान (Identification)</div>
 <table>
-<tr><th colspan="2">HLB Identification</th></tr>
-<tr><td class="label">SR. No.</td><td>${d.srNo}</td></tr>
-<tr><td class="label">HLB No.</td><td><span class="badge">HLB ${d.hlbNo}</span></td></tr>
-<tr><td class="label">Village / Ward</td><td>${d.village}</td></tr>
-<tr><td class="label">Vernacular Name (हिन्दी)</td><td>${d.vernacularName}</td></tr>
-<tr><td class="label">Gram Panchayat</td><td>${d.gpName}</td></tr>
+  <tr><td class="lbl">SR. No.</td><td class="val">${d.srNo}</td></tr>
+  <tr><td class="lbl">HLB No.</td><td class="val"><span class="hlb-badge">HLB ${d.hlbNo}</span></td></tr>
+  <tr><td class="lbl">Village / Ward (ग्राम/वार्ड)</td><td class="val">${d.village}</td></tr>
+  <tr><td class="lbl">Vernacular Name (हिन्दी नाम)</td><td class="val"><strong>${d.vernacularName}</strong></td></tr>
+  <tr><td class="lbl">Gram Panchayat (ग्राम पंचायत)</td><td class="val">${d.gpName}</td></tr>
 </table>
+
+<div class="section-title">📝 HLB विवरण (Description Details)</div>
 <table>
-<tr><th colspan="2">HLB Description Details</th></tr>
-<tr><td class="label">HLB Description (Original)</td><td>${d.hlbDesc||'—'}</td></tr>
-<tr><td class="label">HLB Description Change If Any</td><td>${d.hlbDescChange||'—'}</td></tr>
-<tr><td class="label">Description Change Count</td><td>${chg} time${chg!==1?'s':''}</td></tr>
-<tr><td class="label">Landmark (Geo-Tagging)</td><td>${d.landmark||'—'}</td></tr>
-<tr><td class="label">KML File</td><td>${kmlName}</td></tr>
+  <tr><td class="lbl">HLB Description (मूल विवरण)</td><td class="val">${d.hlbDesc||'—'}</td></tr>
+  <tr><td class="lbl">Description Change (परिवर्तन)</td><td class="val ${d.hlbDescChange?'':'status-pending'}">${d.hlbDescChange||'कोई परिवर्तन नहीं'}</td></tr>
+  <tr><td class="lbl">Edit Count (संपादन गिनती)</td><td class="val">${chg} बार</td></tr>
+  <tr><td class="lbl">Landmark (लैंडमार्क)</td><td class="val ${d.landmark?'status-complete':'status-pending'}">${d.landmark||'⚠️ भरा नहीं गया'}</td></tr>
+  <tr><td class="lbl">Completion Status</td><td class="val ${d.landmark?'status-complete':'status-pending'}">${d.landmark?'✅ पूर्ण (Complete)':'⏳ अपूर्ण (Pending)'}</td></tr>
 </table>
-${d.hlbDescChange?`<div class="change-box">📝 <strong>Change Recorded:</strong> ${d.hlbDescChange}</div>`:''}
+
+${d.hlbDescChange?`<div class="change-box">📝 <strong>दर्ज परिवर्तन:</strong> ${d.hlbDescChange}</div>`:''}
+
+<div class="section-title">📂 KML फ़ाइल विवरण</div>
+${kmlName && kmlName !== 'अपलोड नहीं हुई'
+  ? `<div class="kml-box">📍 <div><strong>KML File:</strong> ${kmlName}${kmlUrl?`<br/><a href="${kmlUrl}" target="_blank">☁️ Supabase Cloud URL: ${kmlUrl}</a>`:''}</div></div>`
+  : `<div style="background:#fff5f5;border:1.5px solid #ffc5c5;border-radius:6px;padding:10px 14px;font-size:12px;color:#c0392b;margin:8px 0;">⚠️ KML फ़ाइल अभी तक अपलोड नहीं हुई।</div>`
+}
+
 <div class="footer">
-  <span>Census of India 2027 — CMMS | Raipur Tehsil</span>
-  <span>Designed &amp; Maintained by Vaibhav Vijay</span>
+  <div class="footer-left">
+    <div><strong>Census of India 2027 — CMMS</strong></div>
+    <div>रायपुर तहसील (002), ब्यावर, राजस्थान</div>
+    <div>यह एक आधिकारिक जनगणना दस्तावेज़ है।</div>
+  </div>
+  <div class="footer-right">
+    <div>Designed &amp; Maintained by <strong>Vaibhav Vijay</strong></div>
+    <div>HLB Data Entry &amp; KML Upload Portal</div>
+    <div style="margin-top:4px;font-size:9px;color:#9ba8c0;">Document ID: HLB-${String(d.hlbNo).padStart(3,'0')}-${new Date().getFullYear()}</div>
+  </div>
 </div>
 </body></html>`;
-  const w = window.open('','_blank','width=900,height=700');
+  const w = window.open('','_blank','width=960,height=750');
   w.document.write(html);
   w.document.close();
-  setTimeout(()=>{ w.print(); },600);
-  showToast(`📄 PDF for HLB ${d.hlbNo} generated!`,'success');
+  setTimeout(()=>{ w.print(); },800);
+  showToast(`📄 HLB ${d.hlbNo} का PDF तैयार — प्रिंट विंडो खुली!`,'success');
 }
+
+// ━━━ Render Saved Data Summary inside card ━━━
+function renderSavedSummary(idx, d, kmlFileName, kmlPublicUrl, savedDate) {
+  const body = document.getElementById(`cb-${idx}`);
+  if(!body) return;
+
+  // Remove old summary if any
+  const old = document.getElementById(`ss-${idx}`);
+  if(old) old.remove();
+
+  // Also fill the live form fields with saved data
+  const lmEl  = document.getElementById(`lm-${idx}`);
+  const dceEl = document.getElementById(`desc-change-${idx}`);
+  if(lmEl  && d.landmark)      lmEl.value  = d.landmark;
+  if(dceEl && d.hlbDescChange) dceEl.value = d.hlbDescChange;
+  // Update KML download row if we have a cloud URL
+  if(kmlPublicUrl) {
+    const dlWrap = document.getElementById(`kml-dl-wrap-${idx}`);
+    const dlName = document.getElementById(`kml-dl-name-${idx}`);
+    const kmlArea = document.getElementById(`kmlarea-${idx}`);
+    if(dlWrap){ dlWrap.style.display='flex'; }
+    if(dlName && kmlFileName){ dlName.textContent = kmlFileName; }
+    if(kmlArea && kmlFileName){
+      kmlArea.classList.add('has-file');
+      const mt = kmlArea.querySelector('.main-text');
+      if(mt) mt.textContent = '☁️ KML Saved in Cloud ✅';
+      const fn = document.getElementById(`kfn-${idx}`);
+      if(fn) fn.textContent = kmlFileName;
+    }
+  }
+
+  const landmark     = d.landmark      || '—';
+  const descChange   = d.hlbDescChange || '';
+  const kmlDisplay   = kmlFileName     || '—';
+  const savedOn      = savedDate        || '—';
+
+  const html = `<div class="saved-summary" id="ss-${idx}">
+  <div class="saved-summary-header">
+    <div class="ss-title">✅ Firestore से लोड / सेव किया गया डेटा</div>
+    <div class="ss-date">🕒 ${savedOn}</div>
+  </div>
+  <div class="ss-body">
+    <div class="ss-grid">
+      <div class="ss-field">
+        <span class="sf-label">Landmark (लैंडमार्क)</span>
+        <span class="sf-value ${landmark==='—'?'empty':''}">${landmark}</span>
+      </div>
+      <div class="ss-field">
+        <span class="sf-label">HLB Description Change</span>
+        <span class="sf-value ${!descChange?'empty highlight':''}">${descChange||'कोई परिवर्तन नहीं'}</span>
+      </div>
+      <div class="ss-field">
+        <span class="sf-label">KML File</span>
+        <span class="sf-value kml-val">${kmlDisplay}</span>
+      </div>
+      <div class="ss-field">
+        <span class="sf-label">Last Saved On</span>
+        <span class="sf-value" style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;">${savedOn}</span>
+      </div>
+    </div>
+  </div>
+  <div class="ss-footer">
+    <span class="ss-footer-note">☁️ यह डेटा Firestore database से load हुआ है</span>
+    <button class="ss-print-btn" onclick="downloadCardPDF(${idx})">🖨️ Print PDF</button>
+  </div>
+</div>`;
+
+  body.insertAdjacentHTML('beforeend', html);
+  // Update card status dot
+  updateCardStatus(idx);
+  updateStats();
+}
+
+window.renderSavedSummary = renderSavedSummary;
 
 function downloadExcel() {
   syncDOMToState();
