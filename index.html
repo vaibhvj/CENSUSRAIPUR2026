@@ -7,11 +7,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
 <script type="module">
-import { initializeApp }                              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, getDocs, collection }
-                                                      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL }
-                                                      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+// ━━━ FIREBASE — Firestore (text data) ━━━
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDocs, collection }
+                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyASZfrOvg3xgkbkfHz2gPdX8wyKQXz3yAg",
@@ -22,90 +21,135 @@ const firebaseConfig = {
   appId:             "1:37613672411:web:f6264f231161ee160ab9fe",
   measurementId:     "G-CQM0BKF98G"
 };
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
 
-const app     = initializeApp(firebaseConfig);
-const db      = getFirestore(app);
-const storage = getStorage(app);
+// ━━━ SUPABASE — Storage (KML files) ━━━
+const SUPA_URL = "https://clxrucesxezukkkqgnnb.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNseHJ1Y2VzeGV6dWtra3Fnbm5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjkyNzEsImV4cCI6MjA5MDI0NTI3MX0.j0HLhhF_FYnuJAGUrGgQvfO7sBE2BrJQWn55pfJxYWg";
+const SUPA_BUCKET = "kml-files";
 
-// ── helper: show cloud sync badge ──────────────────────────────
-function setSyncBadge(idx, state){ // state: 'saving'|'saved'|'error'
+// ━━━ Upload KML to Supabase Storage ━━━
+async function uploadKmlToSupabase(file, hlbNo) {
+  const path = `hlb_${String(hlbNo).padStart(3,'0')}/${Date.now()}_${file.name}`;
+  const res  = await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${path}`, {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type':  'application/octet-stream',
+      'x-upsert':      'true',
+    },
+    body: file,
+  });
+  if(!res.ok) throw new Error(`Supabase upload failed: ${res.status} ${await res.text()}`);
+  // Public URL
+  const publicUrl = `${SUPA_URL}/storage/v1/object/public/${SUPA_BUCKET}/${path}`;
+  return { publicUrl, path };
+}
+
+// ━━━ Sync badge helper ━━━
+function setSyncBadge(idx, status) {
   const el = document.getElementById(`save-status-${idx}`);
   if(!el) return;
   const map = {
-    saving: { cls:'save-status saved', txt:'☁️ Syncing…' },
-    saved:  { cls:'save-status saved', txt:'☁️ Saved to Firebase!' },
-    error:  { cls:'save-status error', txt:'❌ Firebase error!' },
+    saving:      { cls:'save-status saved', txt:'☁️ Cloud में सेव हो रहा है…' },
+    uploading:   { cls:'save-status saved', txt:'📤 KML Supabase पर अपलोड हो रहा है…' },
+    saved:       { cls:'save-status saved', txt:'✅ Firestore + Supabase — सेव हो गया!' },
+    saved_nokml: { cls:'save-status saved', txt:'✅ Firestore में सेव हो गया!' },
+    error:       { cls:'save-status error', txt:'❌ Cloud sync failed! Local save हुआ।' },
   };
-  const m = map[state];
-  el.className = m.cls; el.textContent = m.txt; el.style.display='flex';
-  if(state==='saved') setTimeout(()=>{ el.style.display='none'; }, 3000);
+  const m = map[status] || map.error;
+  el.className = m.cls; el.textContent = m.txt; el.style.display = 'flex';
+  if(status === 'saved' || status === 'saved_nokml')
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-// ── SAVE one card to Firestore + upload KML to Storage ─────────
+// ━━━ SAVE card → Supabase (KML) + Firestore (text) ━━━
 window.fbSaveCard = async function(idx) {
-  const d = window._state.data[idx];
-  setSyncBadge(idx,'saving');
+  const d       = window._state.data[idx];
+  const kmlFile = window._state.kmlFiles[idx];
+  setSyncBadge(idx, 'saving');
   try {
-    let kmlUrl      = d.kmlStorageUrl  || '';
-    let kmlFileName = d.kmlFileName    || '';
-    const kmlFile   = window._state.kmlFiles[idx];
+    let kmlPublicUrl = d.kmlPublicUrl || '';
+    let kmlFileName  = d.kmlFileName  || '';
+
+    // 1. Upload KML to Supabase if a new file is selected
     if(kmlFile) {
-      const storageRef = sRef(storage, `kml/hlb_${d.hlbNo}/${kmlFile.name}`);
-      const snap = await uploadBytes(storageRef, kmlFile);
-      kmlUrl      = await getDownloadURL(snap.ref);
-      kmlFileName = kmlFile.name;
-      d.kmlStorageUrl = kmlUrl;
-      d.kmlFileName   = kmlFileName;
+      setSyncBadge(idx, 'uploading');
+      const { publicUrl, path } = await uploadKmlToSupabase(kmlFile, d.hlbNo);
+      kmlPublicUrl     = publicUrl;
+      kmlFileName      = kmlFile.name;
+      d.kmlPublicUrl   = publicUrl;
+      d.kmlFileName    = kmlFileName;
+      // Update download button with cloud URL
+      const dlBtn = document.getElementById(`kml-dl-wrap-${idx}`);
+      if(dlBtn) dlBtn.dataset.cloudUrl = publicUrl;
     }
-    await setDoc(doc(db, 'hlb_entries', `hlb_${String(d.hlbNo).padStart(3,'0')}`), {
-      srNo:           d.srNo,
-      hlbNo:          d.hlbNo,
-      village:        d.village,
-      vernacularName: d.vernacularName,
-      gpName:         d.gpName,
-      hlbDesc:        d.hlbDesc,
-      hlbDescChange:  d.hlbDescChange  || '',
-      landmark:       d.landmark       || '',
-      kmlFileName:    kmlFileName,
-      kmlStorageUrl:  kmlUrl,
-      changeCount:    window._state.changeCounts[idx] || 0,
-      savedAt:        new Date().toISOString(),
-    }, { merge: true });
-    setSyncBadge(idx,'saved');
-    window.showToast(`☁️ HLB ${d.hlbNo} — Firebase sync done!`,'success');
+
+    // 2. Save all text data to Firestore
+    await setDoc(
+      doc(db, 'hlb_entries', `hlb_${String(d.hlbNo).padStart(3,'0')}`),
+      {
+        srNo:           d.srNo,
+        hlbNo:          d.hlbNo,
+        village:        d.village,
+        vernacularName: d.vernacularName,
+        gpName:         d.gpName,
+        hlbDesc:        d.hlbDesc,
+        hlbDescChange:  d.hlbDescChange || '',
+        landmark:       d.landmark      || '',
+        kmlFileName:    kmlFileName,
+        kmlPublicUrl:   kmlPublicUrl,
+        changeCount:    window._state.changeCounts[idx] || 0,
+        savedAt:        new Date().toISOString(),
+        savedDate:      new Date().toLocaleDateString('hi-IN'),
+      },
+      { merge: true }
+    );
+
+    setSyncBadge(idx, kmlFile ? 'saved' : 'saved_nokml');
+    window.showToast(
+      kmlFile
+        ? `☁️ HLB ${d.hlbNo} — KML Supabase + Data Firestore में सेव!`
+        : `☁️ HLB ${d.hlbNo} — Firestore में सेव हो गया!`,
+      'success'
+    );
   } catch(err) {
-    console.error('Firebase save error:', err);
-    setSyncBadge(idx,'error');
-    window.showToast('❌ Firebase sync failed. Data saved locally.','error');
+    console.error('Cloud save error:', err);
+    setSyncBadge(idx, 'error');
+    window.showToast(`❌ Cloud sync failed (${err.message}). Local save हुआ।`, 'error');
   }
 };
 
-// ── LOAD all saved records from Firestore on startup ────────────
+// ━━━ LOAD all saved records from Firestore on startup ━━━
 window.fbLoadAll = async function() {
+  const bar = document.getElementById('fb-sync-bar');
+  const msg = document.getElementById('fb-sync-msg');
   try {
-    document.getElementById('fb-sync-bar').style.display='flex';
-    document.getElementById('fb-sync-msg').textContent='☁️ Firebase से डेटा लोड हो रहा है…';
+    if(bar) bar.style.display = 'flex';
+    if(msg) msg.textContent   = '☁️ Firestore से पिछला डेटा लोड हो रहा है…';
     const snap = await getDocs(collection(db, 'hlb_entries'));
     let loaded = 0;
     snap.forEach(docSnap => {
       const saved = docSnap.data();
       const entry = window._state.data.find(d => d.hlbNo === saved.hlbNo);
       if(entry) {
-        entry.hlbDescChange  = saved.hlbDescChange  || '';
-        entry.landmark       = saved.landmark       || '';
-        entry.kmlFileName    = saved.kmlFileName    || '';
-        entry.kmlStorageUrl  = saved.kmlStorageUrl  || '';
+        entry.hlbDescChange = saved.hlbDescChange || '';
+        entry.landmark      = saved.landmark      || '';
+        entry.kmlFileName   = saved.kmlFileName   || '';
+        entry.kmlPublicUrl  = saved.kmlPublicUrl  || '';
         loaded++;
       }
     });
-    document.getElementById('fb-sync-bar').style.display='none';
+    if(bar) bar.style.display = 'none';
     window.renderCards();
     window.updateStats();
-    if(loaded>0) window.showToast(`☁️ ${loaded} records loaded from Firebase!`,'success');
+    if(loaded > 0)
+      window.showToast(`☁️ ${loaded} records Firestore से load हुए!`, 'success');
   } catch(err) {
-    console.error('Firebase load error:', err);
-    document.getElementById('fb-sync-bar').style.display='none';
-    window.showToast('⚠️ Could not load Firebase data. Working offline.','error');
+    console.error('Firestore load error:', err);
+    if(bar) bar.style.display = 'none';
+    window.showToast('⚠️ Firestore load failed. Offline mode में काम करें।', 'error');
   }
 };
 </script>
@@ -572,7 +616,8 @@ function initData() {
     hlbDesc: row['HLB Description'] || '',
     hlbDescChange: '',
     landmark: row['Landmark(FOR GEO TAGING)'] || '',
-    uploadKml: row['UPLOAD KML'] || '',
+    kmlFileName:   '',
+    kmlPublicUrl:  '',
   }));
   state.data.forEach((_,i) => { state.changeCounts[i] = 0; });
 }
@@ -757,15 +802,15 @@ function handleKml(e, idx) {
   }
   errEl.classList.remove('visible');
   state.kmlFiles[idx] = file;
-  const fn   = document.getElementById(`kfn-${idx}`);
-  const area = document.getElementById(`kmlarea-${idx}`);
+  const fn     = document.getElementById(`kfn-${idx}`);
+  const area   = document.getElementById(`kmlarea-${idx}`);
   const dlWrap = document.getElementById(`kml-dl-wrap-${idx}`);
   const dlName = document.getElementById(`kml-dl-name-${idx}`);
-  if(fn) fn.textContent = file.name;
-  if(area){ area.classList.add('has-file'); area.querySelector('.main-text').textContent='KML File Attached'; }
+  if(fn)   fn.textContent = file.name;
+  if(area){ area.classList.add('has-file'); area.querySelector('.main-text').textContent='KML File Ready ✅'; }
   if(dlWrap){ dlWrap.style.display='flex'; }
   if(dlName){ dlName.textContent = file.name; }
-  showToast(`✅ "${file.name}" attached to HLB ${state.data[idx].hlbNo}`,'success');
+  showToast(`📂 "${file.name}" तैयार है — 💾 Save करें तो Supabase पर upload होगा।`,'success');
 }
 
 function updateChangeUI(idx) {
@@ -994,13 +1039,25 @@ function downloadExcel() {
 }
 
 function downloadKML(idx) {
-  const file = state.kmlFiles[idx];
-  if (!file) { showToast('⚠️ No KML file uploaded yet.','error'); return; }
-  const url = URL.createObjectURL(file);
-  const a = document.createElement('a');
-  a.href = url; a.download = file.name;
-  a.click(); URL.revokeObjectURL(url);
-  showToast(`⬇️ "${file.name}" downloading…`,'success');
+  const d        = state.data[idx];
+  const file     = state.kmlFiles[idx];
+  const cloudUrl = d.kmlPublicUrl || '';
+  // Prefer Supabase cloud URL if already saved, else use local file
+  if(cloudUrl) {
+    const a = document.createElement('a');
+    a.href = cloudUrl; a.target = '_blank';
+    a.download = d.kmlFileName || `hlb_${d.hlbNo}.kml`;
+    a.click();
+    showToast(`⬇️ Supabase से KML download हो रहा है…`,'success');
+  } else if(file) {
+    const url = URL.createObjectURL(file);
+    const a   = document.createElement('a');
+    a.href = url; a.download = file.name;
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`⬇️ "${file.name}" local से download हो रहा है…`,'success');
+  } else {
+    showToast('⚠️ कोई KML file नहीं मिली। पहले upload करें।','error');
+  }
 }
 
 function openGuidelines(){ document.getElementById('guidelinesModal').classList.add('open'); }
