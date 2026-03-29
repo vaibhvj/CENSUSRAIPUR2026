@@ -739,9 +739,20 @@ function renderCards() {
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function buildCard(d, idx) {
-  const complete = isComplete(idx);
-  const chg = state.changeCounts[idx]||0;
-  const hasKml = !!state.kmlFiles[idx];
+  const complete    = isComplete(idx);
+  const chg         = state.changeCounts[idx]||0;
+  const hasLocalKml = !!state.kmlFiles[idx];
+  const hasCloudKml = !!(d.kmlPublicUrl && d.kmlFileName);
+  const hasKml      = hasLocalKml || hasCloudKml;
+  // Determine display name: prefer local file name, fall back to Firestore name
+  const kmlDisplayName = hasLocalKml
+    ? state.kmlFiles[idx].name
+    : (d.kmlFileName || '');
+  // Label shown inside the upload area
+  const kmlAreaLabel = hasLocalKml
+    ? 'KML File Attached ✅'
+    : (hasCloudKml ? '☁️ KML Loaded from Supabase ✅' : 'Click to upload KML file');
+
   return `<div class="entry-card${complete?' is-complete':''}" id="card-${idx}">
   <div class="card-header" id="ch-${idx}" onclick="toggleCard(${idx})">
     <span class="sr-badge">SR #${d.srNo}</span>
@@ -798,17 +809,18 @@ function buildCard(d, idx) {
       <div class="form-group full">
         <label>Upload KML File</label>
         <div class="kml-upload-area${hasKml?' has-file':''}" id="kmlarea-${idx}">
-          <span class="kml-icon">📍</span>
+          <span class="kml-icon">${hasCloudKml&&!hasLocalKml?'☁️':'📍'}</span>
           <div class="kml-label-text">
-            <div class="main-text">${hasKml?'KML File Attached':'Click to upload KML file'}</div>
-            <div class="sub-text">Accepted format: .kml only</div>
+            <div class="main-text">${kmlAreaLabel}</div>
+            <div class="sub-text">${hasCloudKml&&!hasLocalKml?'Supabase से लोड हुई — नई फ़ाइल चुनकर replace करें':'Accepted format: .kml only'}</div>
           </div>
-          <span class="kml-filename" id="kfn-${idx}">${hasKml?state.kmlFiles[idx].name:''}</span>
+          <span class="kml-filename" id="kfn-${idx}">${esc(kmlDisplayName)}</span>
           <input type="file" id="kml-${idx}" accept=".kml,application/vnd.google-earth.kml+xml" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
         </div>
         <div class="err-msg" id="err-kml-${idx}">⚠️ Only .kml files are accepted.</div>
-        <div class="kml-download-wrap" id="kml-dl-wrap-${idx}" style="display:${hasKml?'flex':'none'};margin-top:8px;align-items:center;gap:10px;">
-          <button class="btn-kml-download" onclick="downloadKML(${idx})">⬇️ Download KML — <span id="kml-dl-name-${idx}">${hasKml?state.kmlFiles[idx].name:''}</span></button>
+        <div class="kml-download-wrap" id="kml-dl-wrap-${idx}" style="display:${hasKml?'flex':'none'};margin-top:8px;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button class="btn-kml-download" onclick="downloadKML(${idx})">⬇️ Download KML — <span id="kml-dl-name-${idx}">${esc(kmlDisplayName)}</span></button>
+          ${hasCloudKml?`<span style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--mint);background:#e0fff6;padding:3px 8px;border-radius:4px;border:1px solid var(--mint);">☁️ Supabase Cloud</span>`:''}
         </div>
       </div>
       <div class="card-actions">
@@ -1152,20 +1164,24 @@ function renderSavedSummary(idx, d, kmlFileName, kmlPublicUrl, savedDate) {
   const dceEl = document.getElementById(`desc-change-${idx}`);
   if(lmEl  && d.landmark)      lmEl.value  = d.landmark;
   if(dceEl && d.hlbDescChange) dceEl.value = d.hlbDescChange;
-  // Update KML download row if we have a cloud URL
-  if(kmlPublicUrl) {
-    const dlWrap = document.getElementById(`kml-dl-wrap-${idx}`);
-    const dlName = document.getElementById(`kml-dl-name-${idx}`);
+  // Update KML download row if we have a cloud URL and no new local file selected
+  if(kmlPublicUrl && !state.kmlFiles[idx]) {
+    const dlWrap  = document.getElementById(`kml-dl-wrap-${idx}`);
+    const dlName  = document.getElementById(`kml-dl-name-${idx}`);
     const kmlArea = document.getElementById(`kmlarea-${idx}`);
-    if(dlWrap){ dlWrap.style.display='flex'; }
-    if(dlName && kmlFileName){ dlName.textContent = kmlFileName; }
-    if(kmlArea && kmlFileName){
+    const fn      = document.getElementById(`kfn-${idx}`);
+    if(dlWrap) dlWrap.style.display = 'flex';
+    if(dlName && kmlFileName) dlName.textContent = kmlFileName;
+    if(kmlArea) {
       kmlArea.classList.add('has-file');
-      const mt = kmlArea.querySelector('.main-text');
-      if(mt) mt.textContent = '☁️ KML Saved in Cloud ✅';
-      const fn = document.getElementById(`kfn-${idx}`);
-      if(fn) fn.textContent = kmlFileName;
+      const mt  = kmlArea.querySelector('.main-text');
+      const st  = kmlArea.querySelector('.sub-text');
+      const ico = kmlArea.querySelector('.kml-icon');
+      if(mt)  mt.textContent  = '☁️ KML Loaded from Supabase ✅';
+      if(st)  st.textContent  = 'Supabase से लोड हुई — नई फ़ाइल चुनकर replace करें';
+      if(ico) ico.textContent = '☁️';
     }
+    if(fn && kmlFileName) fn.textContent = kmlFileName;
   }
 
   const landmark     = d.landmark      || '—';
@@ -1230,21 +1246,42 @@ function downloadExcel() {
 
 function downloadKML(idx) {
   const d        = state.data[idx];
-  const file     = state.kmlFiles[idx];
-  const cloudUrl = d.kmlPublicUrl || '';
-  // Prefer Supabase cloud URL if already saved, else use local file
-  if(cloudUrl) {
-    const a = document.createElement('a');
-    a.href = cloudUrl; a.target = '_blank';
-    a.download = d.kmlFileName || `hlb_${d.hlbNo}.kml`;
-    a.click();
-    showToast(`⬇️ Supabase से KML download हो रहा है…`,'success');
-  } else if(file) {
+  const file     = state.kmlFiles[idx];    // newly selected local file (not yet saved)
+  const cloudUrl = d.kmlPublicUrl || '';   // saved Supabase URL from Firestore
+  const fileName = d.kmlFileName  || (file ? file.name : `hlb_${d.hlbNo}.kml`);
+
+  // Priority: new local file → cloud URL
+  if(file) {
+    // Local file selected this session (may or may not be saved yet)
     const url = URL.createObjectURL(file);
     const a   = document.createElement('a');
     a.href = url; a.download = file.name;
-    a.click(); URL.revokeObjectURL(url);
-    showToast(`⬇️ "${file.name}" local से download हो रहा है…`,'success');
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`⬇️ "${file.name}" (local) download हो रहा है…`,'success');
+  } else if(cloudUrl) {
+    // Fetch from Supabase and trigger download so browser doesn't just open it
+    showToast(`☁️ Supabase से "${fileName}" download हो रही है…`,'success');
+    fetch(cloudUrl)
+      .then(r => {
+        if(!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.blob();
+      })
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`✅ "${fileName}" Supabase से download हो गई!`,'success');
+      })
+      .catch(err => {
+        // Fallback: open in new tab
+        window.open(cloudUrl, '_blank');
+        showToast(`⚠️ Direct download failed — tab में खुल रही है। (${err.message})`,'error');
+      });
   } else {
     showToast('⚠️ कोई KML file नहीं मिली। पहले upload करें।','error');
   }
