@@ -32,8 +32,9 @@ const SUPA_BUCKET = "kml-files";
 // ━━━ Upload KML to Supabase Storage ━━━
 async function uploadKmlToSupabase(file, hlbNo) {
   const path = `hlb_${String(hlbNo).padStart(3,'0')}/${Date.now()}_${file.name}`;
-  const res  = await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${path}`, {
-    method:  'POST',
+  // PUT with x-upsert:true is the correct Supabase Storage upload method
+  let res = await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${path}`, {
+    method:  'PUT',
     headers: {
       'Authorization': `Bearer ${SUPA_KEY}`,
       'Content-Type':  'application/octet-stream',
@@ -41,7 +42,22 @@ async function uploadKmlToSupabase(file, hlbNo) {
     },
     body: file,
   });
-  if(!res.ok) throw new Error(`Supabase upload failed: ${res.status} ${await res.text()}`);
+  // Fallback to POST if server rejects PUT
+  if(!res.ok && (res.status === 405 || res.status === 404)) {
+    res = await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${path}`, {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type':  'application/octet-stream',
+        'x-upsert':      'true',
+      },
+      body: file,
+    });
+  }
+  if(!res.ok) {
+    const errText = await res.text();
+    throw new Error(`KML upload failed (${res.status}): ${errText}`);
+  }
   // Public URL
   const publicUrl = `${SUPA_URL}/storage/v1/object/public/${SUPA_BUCKET}/${path}`;
   return { publicUrl, path };
@@ -52,11 +68,11 @@ function setSyncBadge(idx, status) {
   const el = document.getElementById(`save-status-${idx}`);
   if(!el) return;
   const map = {
-    saving:      { cls:'save-status saved', txt:'☁️ Cloud में सेव हो रहा है…' },
-    uploading:   { cls:'save-status saved', txt:'📤 KML Supabase पर अपलोड हो रहा है…' },
-    saved:       { cls:'save-status saved', txt:'✅ Firestore + Supabase — सेव हो गया!' },
-    saved_nokml: { cls:'save-status saved', txt:'✅ Firestore में सेव हो गया!' },
-    error:       { cls:'save-status error', txt:'❌ Cloud sync failed! Local save हुआ।' },
+    saving:      { cls:'save-status saved', txt:'💾 डेटाबेस में सेव हो रहा है…' },
+    uploading:   { cls:'save-status saved', txt:'📤 KML फ़ाइल अपलोड हो रही है…' },
+    saved:       { cls:'save-status saved', txt:'✅ डेटाबेस में सेव हो गया!' },
+    saved_nokml: { cls:'save-status saved', txt:'✅ डेटाबेस में सेव हो गया!' },
+    error:       { cls:'save-status error', txt:'❌ सेव नहीं हो पाया! Local save हुआ।' },
   };
   const m = map[status] || map.error;
   el.className = m.cls; el.textContent = m.txt; el.style.display = 'flex';
@@ -110,8 +126,8 @@ window.fbSaveCard = async function(idx) {
     setSyncBadge(idx, kmlFile ? 'saved' : 'saved_nokml');
     window.showToast(
       kmlFile
-        ? `☁️ HLB ${d.hlbNo} — KML Supabase + Data Firestore में सेव!`
-        : `☁️ HLB ${d.hlbNo} — Firestore में सेव हो गया!`,
+        ? `✅ HLB ${d.hlbNo} — KML + डेटा डेटाबेस में सेव हो गया!`
+        : `✅ HLB ${d.hlbNo} — डेटाबेस में सेव हो गया!`,
       'success'
     );
 
@@ -126,7 +142,7 @@ window.fbSaveCard = async function(idx) {
   } catch(err) {
     console.error('Cloud save error:', err);
     setSyncBadge(idx, 'error');
-    window.showToast(`❌ Cloud sync failed (${err.message}). Local save हुआ।`, 'error');
+    window.showToast(`❌ सेव नहीं हो पाया (${err.message}). Local save हुआ।`, 'error');
   }
 };
 
@@ -136,7 +152,7 @@ window.fbLoadAll = async function() {
   const msg = document.getElementById('fb-sync-msg');
   try {
     if(bar) bar.style.display = 'flex';
-    if(msg) msg.textContent   = '☁️ Firestore से पिछला डेटा लोड हो रहा है…';
+    if(msg) msg.textContent   = '💾 डेटाबेस से पिछला डेटा लोड हो रहा है…';
     const snap = await getDocs(collection(db, 'hlb_entries'));
     let loaded = 0;
     snap.forEach(docSnap => {
@@ -164,11 +180,11 @@ window.fbLoadAll = async function() {
       }
     });
     if(loaded > 0)
-      window.showToast(`☁️ ${loaded} records Firestore से load हुए!`, 'success');
+      window.showToast(`✅ ${loaded} records डेटाबेस से load हुए!`, 'success');
   } catch(err) {
     console.error('Firestore load error:', err);
     if(bar) bar.style.display = 'none';
-    window.showToast('⚠️ Firestore load failed. Offline mode में काम करें।', 'error');
+    window.showToast('⚠️ डेटाबेस load नहीं हो पाया। Offline mode में काम करें।', 'error');
   }
 };
 </script>
@@ -721,7 +737,8 @@ function applyFilters() {
 
 function isComplete(idx) {
   const d = state.data[idx];
-  return !!(d.hlbDesc.trim() && d.landmark.trim());
+  const hasKml = !!(state.kmlFiles[idx] || (d.kmlPublicUrl && d.kmlFileName));
+  return !!(d.hlbDesc.trim() && d.landmark.trim() && hasKml);
 }
 
 function renderCards() {
@@ -751,7 +768,7 @@ function buildCard(d, idx) {
   // Label shown inside the upload area
   const kmlAreaLabel = hasLocalKml
     ? 'KML File Attached ✅'
-    : (hasCloudKml ? '☁️ KML Loaded from Supabase ✅' : 'Click to upload KML file');
+    : (hasCloudKml ? '☁️ KML डेटाबेस से लोड हुई ✅' : 'Click to upload KML file');
 
   return `<div class="entry-card${complete?' is-complete':''}" id="card-${idx}">
   <div class="card-header" id="ch-${idx}" onclick="toggleCard(${idx})">
@@ -807,12 +824,12 @@ function buildCard(d, idx) {
         <div class="err-msg" id="err-lm-${idx}">⚠️ Landmark is required.</div>
       </div>
       <div class="form-group full">
-        <label>Upload KML File</label>
+        <label>Upload KML File <span class="req">*</span> <span style="font-size:.7rem;color:var(--red-err);font-family:'IBM Plex Mono',monospace;font-weight:600;text-transform:none;">(अनिवार्य)</span></label>
         <div class="kml-upload-area${hasKml?' has-file':''}" id="kmlarea-${idx}">
           <span class="kml-icon">${hasCloudKml&&!hasLocalKml?'☁️':'📍'}</span>
           <div class="kml-label-text">
             <div class="main-text">${kmlAreaLabel}</div>
-            <div class="sub-text">${hasCloudKml&&!hasLocalKml?'Supabase से लोड हुई — नई फ़ाइल चुनकर replace करें':'Accepted format: .kml only'}</div>
+            <div class="sub-text">${hasCloudKml&&!hasLocalKml?'डेटाबेस से लोड हुई — नई फ़ाइल चुनकर replace करें':'Accepted format: .kml only'}</div>
           </div>
           <span class="kml-filename" id="kfn-${idx}">${esc(kmlDisplayName)}</span>
           <input type="file" id="kml-${idx}" accept=".kml,application/vnd.google-earth.kml+xml" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
@@ -820,7 +837,7 @@ function buildCard(d, idx) {
         <div class="err-msg" id="err-kml-${idx}">⚠️ Only .kml files are accepted.</div>
         <div class="kml-download-wrap" id="kml-dl-wrap-${idx}" style="display:${hasKml?'flex':'none'};margin-top:8px;align-items:center;gap:10px;flex-wrap:wrap;">
           <button class="btn-kml-download" onclick="downloadKML(${idx})">⬇️ Download KML — <span id="kml-dl-name-${idx}">${esc(kmlDisplayName)}</span></button>
-          ${hasCloudKml?`<span style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--mint);background:#e0fff6;padding:3px 8px;border-radius:4px;border:1px solid var(--mint);">☁️ Supabase Cloud</span>`:''}
+          ${hasCloudKml?`<span style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--mint);background:#e0fff6;padding:3px 8px;border-radius:4px;border:1px solid var(--mint);">✅ डेटाबेस में सेव हुई</span>`:''}
         </div>
       </div>
       <div class="card-actions">
@@ -887,7 +904,7 @@ function handleKml(e, idx) {
   if(area){ area.classList.add('has-file'); area.querySelector('.main-text').textContent='KML File Ready ✅'; }
   if(dlWrap){ dlWrap.style.display='flex'; }
   if(dlName){ dlName.textContent = file.name; }
-  showToast(`📂 "${file.name}" तैयार है — 💾 Save करें तो Supabase पर upload होगा।`,'success');
+  showToast(`📂 "${file.name}" तैयार है — 💾 Save करने पर upload होगा।`,'success');
 }
 
 function updateChangeUI(idx) {
@@ -1026,17 +1043,31 @@ function saveCard(idx) {
   const statusEl = document.getElementById(`save-status-${idx}`);
   if(lmEl) state.data[idx].landmark = lmEl.value;
   if(dce)  state.data[idx].hlbDescChange = dce.value;
+
+  // ━━━ KML mandatory check ━━━
+  const hasLocalKml = !!state.kmlFiles[idx];
+  const hasCloudKml = !!(state.data[idx].kmlPublicUrl && state.data[idx].kmlFileName);
+  if(!hasLocalKml && !hasCloudKml) {
+    const kmlArea = document.getElementById(`kmlarea-${idx}`);
+    const errKml  = document.getElementById(`err-kml-${idx}`);
+    if(kmlArea) { kmlArea.style.border='2px solid var(--red-err)'; setTimeout(()=>{ kmlArea.style.border=''; },3000); }
+    if(errKml)  { errKml.textContent='⚠️ KML फ़ाइल अनिवार्य है — Save से पहले .kml अपलोड करें।'; errKml.classList.add('visible'); setTimeout(()=>{ errKml.classList.remove('visible'); errKml.textContent='⚠️ Only .kml files are accepted.'; },4000); }
+    if(statusEl){ statusEl.className='save-status error'; statusEl.textContent='⚠️ KML file required!'; statusEl.style.display='flex'; setTimeout(()=>{ statusEl.style.display='none'; },3000); }
+    showToast('❌ KML फ़ाइल अनिवार्य है! Save से पहले .kml file upload करें।','error');
+    return;
+  }
+
   const ok = validateCard(idx);
   if(!ok){
     if(statusEl){ statusEl.className='save-status error'; statusEl.textContent='⚠️ Landmark is required!'; statusEl.style.display='flex'; }
-    showToast('⚠️ Please fill in the required Landmark field.','error');
+    showToast('⚠️ Landmark भरना अनिवार्य है।','error');
     return;
   }
   updateCardStatus(idx);
   updateStats();
-  if(statusEl){ statusEl.className='save-status saved'; statusEl.textContent='✅ Saved locally!'; statusEl.style.display='flex'; setTimeout(()=>{ statusEl.style.display='none'; },2000); }
-  showToast(`✅ HLB ${state.data[idx].hlbNo} saved locally!`,'success');
-  // Push to Firebase if available
+  if(statusEl){ statusEl.className='save-status saved'; statusEl.textContent='✅ Locally saved!'; statusEl.style.display='flex'; setTimeout(()=>{ statusEl.style.display='none'; },2000); }
+  showToast(`✅ HLB ${state.data[idx].hlbNo} locally saved!`,'success');
+  // Push to database if available
   if(window.fbSaveCard) window.fbSaveCard(idx);
 }
 
@@ -1126,7 +1157,7 @@ ${d.hlbDescChange?`<div class="change-box">📝 <strong>दर्ज परि�
 
 <div class="section-title">📂 KML फ़ाइल विवरण</div>
 ${kmlName && kmlName !== 'अपलोड नहीं हुई'
-  ? `<div class="kml-box">📍 <div><strong>KML File:</strong> ${kmlName}${kmlUrl?`<br/><a href="${kmlUrl}" target="_blank">☁️ Supabase Cloud URL: ${kmlUrl}</a>`:''}</div></div>`
+  ? `<div class="kml-box">📍 <div><strong>KML File:</strong> ${kmlName}${kmlUrl?`<br/><a href="${kmlUrl}" target="_blank">🔗 Download URL: ${kmlUrl}</a>`:''}</div></div>`
   : `<div style="background:#fff5f5;border:1.5px solid #ffc5c5;border-radius:6px;padding:10px 14px;font-size:12px;color:#c0392b;margin:8px 0;">⚠️ KML फ़ाइल अभी तक अपलोड नहीं हुई।</div>`
 }
 
@@ -1177,8 +1208,8 @@ function renderSavedSummary(idx, d, kmlFileName, kmlPublicUrl, savedDate) {
       const mt  = kmlArea.querySelector('.main-text');
       const st  = kmlArea.querySelector('.sub-text');
       const ico = kmlArea.querySelector('.kml-icon');
-      if(mt)  mt.textContent  = '☁️ KML Loaded from Supabase ✅';
-      if(st)  st.textContent  = 'Supabase से लोड हुई — नई फ़ाइल चुनकर replace करें';
+      if(mt)  mt.textContent  = '☁️ KML डेटाबेस से लोड हुई ✅';
+      if(st)  st.textContent  = 'डेटाबेस से लोड हुई — नई फ़ाइल चुनकर replace करें';
       if(ico) ico.textContent = '☁️';
     }
     if(fn && kmlFileName) fn.textContent = kmlFileName;
@@ -1191,7 +1222,7 @@ function renderSavedSummary(idx, d, kmlFileName, kmlPublicUrl, savedDate) {
 
   const html = `<div class="saved-summary" id="ss-${idx}">
   <div class="saved-summary-header">
-    <div class="ss-title">✅ Firestore से लोड / सेव किया गया डेटा</div>
+    <div class="ss-title">✅ डेटाबेस में सेव हुआ / लोड हुआ</div>
     <div class="ss-date">🕒 ${savedOn}</div>
   </div>
   <div class="ss-body">
@@ -1215,7 +1246,7 @@ function renderSavedSummary(idx, d, kmlFileName, kmlPublicUrl, savedDate) {
     </div>
   </div>
   <div class="ss-footer">
-    <span class="ss-footer-note">☁️ यह डेटा Firestore database से load हुआ है</span>
+    <span class="ss-footer-note">💾 यह डेटा डेटाबेस में सेव हुआ / लोड हुआ है</span>
     <button class="ss-print-btn" onclick="downloadCardPDF(${idx})">🖨️ Print PDF</button>
   </div>
 </div>`;
@@ -1261,8 +1292,8 @@ function downloadKML(idx) {
     URL.revokeObjectURL(url);
     showToast(`⬇️ "${file.name}" (local) download हो रहा है…`,'success');
   } else if(cloudUrl) {
-    // Fetch from Supabase and trigger download so browser doesn't just open it
-    showToast(`☁️ Supabase से "${fileName}" download हो रही है…`,'success');
+    // Fetch from database and trigger download
+    showToast(`💾 "${fileName}" download हो रही है…`,'success');
     fetch(cloudUrl)
       .then(r => {
         if(!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1275,7 +1306,7 @@ function downloadKML(idx) {
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast(`✅ "${fileName}" Supabase से download हो गई!`,'success');
+        showToast(`✅ "${fileName}" download हो गई!`,'success');
       })
       .catch(err => {
         // Fallback: open in new tab
