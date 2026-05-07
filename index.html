@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -488,6 +489,42 @@ pre#json-output{font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-heig
   .footer-left{flex-direction:column;text-align:center;}
   .footer-right{text-align:center;}
 }
+
+/* ━━━ Disabled fields styling ━━━ */
+input:disabled, textarea:disabled, select:disabled {
+  background: #F1F4FB !important;
+  color: #8a95b0 !important;
+  cursor: not-allowed !important;
+  border-style: dashed !important;
+  opacity: 0.75;
+}
+.kml-upload-area:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+
+/* ━━━ READ-ONLY / LOCKED MODE ━━━ */
+input[type="text"].locked-field,
+textarea.locked-field,
+select.locked-field {
+  background: #f0f0f4 !important;
+  color: #888 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  border-style: dashed !important;
+  opacity: 0.75 !important;
+}
+.btn-save-card.locked-btn {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  filter: grayscale(1) !important;
+}
+/* Keep KML upload area fully active */
+.kml-upload-area { pointer-events: auto !important; opacity: 1 !important; }
+
 </style>
 </head>
 <body>
@@ -624,28 +661,12 @@ pre#json-output{font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-heig
 <div class="main-wrap">
   <div class="submit-panel">
     <span class="panel-title">📋 HLB Entry Form — Batch Submission (354 Entries)</span>
-    <button class="btn btn-accent" onclick="submitAll()">📤 Submit &amp; Preview JSON</button>
+    
     <button class="btn btn-success" onclick="downloadJSON()">💾 Download JSON</button>
     <button class="btn btn-excel" onclick="downloadExcel()">📊 Download Excel</button>
   </div>
   <div id="cardContainer"></div>
   <div class="pagination" id="paginationWrap"></div>
-</div>
-
-<div class="modal-backdrop" id="jsonModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <span>📄</span>
-      <h2>Submitted Data — JSON Preview</h2>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body"><pre id="json-output"></pre></div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="copyJSON()">📋 Copy JSON</button>
-      <button class="btn btn-success" onclick="downloadJSON()">💾 Download JSON</button>
-      <button class="btn btn-primary" onclick="closeModal()">Close</button>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -678,10 +699,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     document.getElementById('loadingOverlay').style.display='none';
     // Auto-show guidelines on first visit
-    if(!sessionStorage.getItem('hlb_guidelines_shown')){
-      openGuidelines();
-      sessionStorage.setItem('hlb_guidelines_shown','1');
-    }
+    // guidelines auto-open removed
     // Load Firebase data
     if(window.fbLoadAll) window.fbLoadAll();
   }, 700);
@@ -812,7 +830,7 @@ function buildCard(d, idx) {
       </div>
       <div class="form-group full">
         <label>HLB Description CHANGE IF ANY <span style="font-size:.7rem;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;text-transform:none;font-weight:400;">(परिवर्तन होने पर भरें)</span></label>
-        <textarea class="hlb-desc-change-area" id="desc-change-${idx}" rows="3" placeholder="यदि HLB विवरण में कोई परिवर्तन है तो यहाँ लिखें…">${esc(d.hlbDescChange||'')}</textarea>
+        <textarea class="hlb-desc-change-area" id="desc-change-${idx}" rows="3" placeholder="यदि HLB विवरण में कोई परिवर्तन है तो यहाँ लिखें…" disabled>${esc(d.hlbDescChange||'')}</textarea>
         <div class="change-tracker${chg>0?' visible':''}" id="ct-${idx}">
           <span>📝</span>
           <span>Description change edited <strong id="ctnum-${idx}">${chg}</strong> time${chg!==1?'s':''} this session</span>
@@ -820,7 +838,7 @@ function buildCard(d, idx) {
       </div>
       <div class="form-group full">
         <label>Landmark (for Geo-Tagging) <span class="req">*</span></label>
-        <input type="text" id="lm-${idx}" value="${esc(d.landmark)}" placeholder="Enter landmark for geo-tagging…"/>
+        <input type="text" id="lm-${idx}" value="${esc(d.landmark)}" placeholder="Enter landmark for geo-tagging…" disabled/>
         <div class="err-msg" id="err-lm-${idx}">⚠️ Landmark is required.</div>
       </div>
       <div class="form-group full">
@@ -832,7 +850,7 @@ function buildCard(d, idx) {
             <div class="sub-text">${hasCloudKml&&!hasLocalKml?'डेटाबेस से लोड हुई — नई फ़ाइल चुनकर replace करें':'Accepted format: .kml only'}</div>
           </div>
           <span class="kml-filename" id="kfn-${idx}">${esc(kmlDisplayName)}</span>
-          <input type="file" id="kml-${idx}" accept=".kml,application/vnd.google-earth.kml+xml" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
+          <input type="file" id="kml-${idx}" accept=".kml,application/vnd.google-earth.kml+xml" style="position:absolute;inset:0;opacity:0;cursor:default;width:100%;height:100%;" disabled/>
         </div>
         <div class="err-msg" id="err-kml-${idx}">⚠️ Only .kml files are accepted.</div>
         <div class="kml-download-wrap" id="kml-dl-wrap-${idx}" style="display:${hasKml?'flex':'none'};margin-top:8px;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -841,7 +859,7 @@ function buildCard(d, idx) {
         </div>
       </div>
       <div class="card-actions">
-        <button class="btn btn-save-card" onclick="saveCard(${idx})">💾 Save</button>
+        <button class="btn btn-save-card" onclick="saveCard(${idx})" disabled style="opacity:0.45;cursor:not-allowed;">💾 Save</button>
         <button class="btn btn-pdf-card" onclick="downloadCardPDF(${idx})">📄 Download PDF</button>
         <span class="save-status" id="save-status-${idx}"></span>
       </div>
@@ -883,6 +901,22 @@ function attachCardEvents(idx) {
   const kmlEl = document.getElementById(`kml-${idx}`);
   if (kmlEl) kmlEl.addEventListener('change', e => handleKml(e,idx));
 }
+
+
+// ━━━ LOCK all inputs except KML ━━━
+(function lockFields(idx) {
+  // All text inputs inside this card
+  const card = document.getElementById('card-' + idx);
+  if (!card) return;
+  card.querySelectorAll('input[type="text"], textarea, select').forEach(function(el) {
+    el.classList.add('locked-field');
+    el.setAttribute('readonly', 'readonly');
+    el.setAttribute('tabindex', '-1');
+  });
+  // Lock the Save button
+  const saveBtn = card.querySelector('.btn-save-card');
+  if (saveBtn) saveBtn.classList.add('locked-btn');
+})(idx);
 
 function handleKml(e, idx) {
   const file = e.target.files[0];
@@ -980,16 +1014,9 @@ function buildPayload() {
   }));
 }
 
-function submitAll() {
-  const payload=buildPayload();
-  document.getElementById('json-output').textContent=JSON.stringify(payload,null,2);
-  document.getElementById('jsonModal').classList.add('open');
-}
-function closeModal(){ document.getElementById('jsonModal').classList.remove('open'); }
-function copyJSON(){
-  navigator.clipboard.writeText(document.getElementById('json-output').textContent)
-    .then(()=>showToast('📋 JSON copied!','success'));
-}
+// submitAll removed
+// closeModal removed
+// copyJSON removed
 function downloadJSON(){
   const blob=new Blob([JSON.stringify(buildPayload(),null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob), a=document.createElement('a');
